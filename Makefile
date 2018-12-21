@@ -4,7 +4,7 @@ OMPFLAGS=-fopenmp
 NVCC=nvcc
 NVCCFLAGS=$(CXXFLAGS)  --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS) -lcublas -gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70
 SRCDIR=src
-SRCS=$(shell find src -name '*.cu' -o -name '*.cpp')
+SRCS=$(shell find src -maxdepth 1 -name '*.cu' -o -name '*.cpp')
 OBJDIR=objs
 OBJS=$(subst $(SRCDIR),$(OBJDIR), $(SRCS))
 OBJS:=$(subst .cpp,.o,$(OBJS))
