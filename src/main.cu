@@ -13,7 +13,8 @@ int main(int argc, char** argv){
 		std::cout
 			<<"# device "<<device_id<<std::endl
 			<<"  - device name        : "<<prop.name<<std::endl
-			<<"  - compute capability : "<<prop.major<<"."<<prop.minor<<std::endl;
+			<<"  - compute capability : "<<prop.major<<"."<<prop.minor<<std::endl
+			<<"  - global memory      : "<<(prop.totalGlobalMem/(1<<20))<<" MB"<<std::endl;
 	}
 	// }}}
 }
