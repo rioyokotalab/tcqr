@@ -1,6 +1,7 @@
 #include <mma.h>
 #include <cuda_fp16.h>
 #include <cutf/type.hpp>
+#include <cutf/math.hpp>
 #include "tcqr.hpp"
 
 namespace{
