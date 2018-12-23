@@ -4,6 +4,7 @@
 #include <cutf/type.hpp>
 #include <cutf/memory.hpp>
 #include "tcqr.hpp"
+#include "utils.hpp"
 
 constexpr std::size_t M = 16;
 constexpr std::size_t N = 16;
@@ -44,4 +45,10 @@ int main(int argc, char** argv){
 	tcqr::qr16x16<input_t, output_t, norm_t, use_tc>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), M, N);
 	cutf::cuda::memory::copy(h_matrix_q.get(), d_matrix_q.get(), M * M);
 	cutf::cuda::memory::copy(h_matrix_r.get(), d_matrix_r.get(), M * N);
+
+	utils::print_matrix(h_matrix_a.get(), M, N, std::string("A").c_str());
+	std::cout<<std::endl;
+	utils::print_matrix(h_matrix_q.get(), M, M, std::string("Q").c_str());
+	std::cout<<std::endl;
+	utils::print_matrix(h_matrix_r.get(), M, N, std::string("R").c_str());
 }
