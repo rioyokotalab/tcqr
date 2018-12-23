@@ -66,8 +66,8 @@ int main(int argc, char** argv){
 			CUBLAS_OP_N, CUBLAS_OP_N,
 			M, N, M,
 			&one,
-			d_matrix_r.get(), M,
 			d_matrix_q.get(), M,
+			d_matrix_r.get(), M,
 			&zero,
 			d_matrix_qr.get(), M
 			);
