@@ -11,11 +11,11 @@ constexpr unsigned fragment_dimension = 16;
 // 2乗和
 // sum(ptr[start_id] : ptr[15])
 template <class T>
-__device__ T get_norm2_16(T* const ptr, const std::size_t start_id, unsigned warp_id){
+__device__ T get_norm2_16(T* const ptr, const std::size_t size, unsigned warp_id){
 	T tmp = cutf::cuda::type::cast<T>(0.0f);
 	
 	// load
-	if(start_id <= warp_id && warp_id < 16){
+	if(warp_id < size){
 		tmp = ptr[warp_id];
 		tmp = tmp * tmp;
 	}
