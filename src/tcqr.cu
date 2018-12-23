@@ -6,6 +6,7 @@
 
 namespace{
 constexpr std::size_t warp_size = 32; // 本当はwarpSizeを使いたい
+constexpr unsigned fragment_dimension = 16;
 
 // 2乗和
 // sum(ptr[start_id] : ptr[15])
