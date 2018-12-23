@@ -168,10 +168,13 @@ __global__ void qr16x16tc_kernel<half, half, half>(half* const q, half* const r,
 	__shared__ half q_shared[fragment_dimension * fragment_dimension];
 	__shared__ half r_shared[fragment_dimension * fragment_dimension];
 
-	copy_16x16<half, half>(r_shared, a, warp_id);
+	copy_16x16<half, half>(r_shared, a, m, n, warp_id);
 	make_identity_matrix(q_shared, m, warp_id);
 
 	qr16x16tc_core<half, half, half>(q_shared, r_shared, m, n, warp_id);
+
+	copy_16x16<half, half>(r, m, n, r_shared, warp_id);
+	copy_16x16<half, half>(q, m, m, q_shared, warp_id);
 }
 } // noname namespace
 
