@@ -3,6 +3,7 @@
 #include <cutf/device.hpp>
 #include <cutf/type.hpp>
 #include <cutf/memory.hpp>
+#include <cutf/cublas.hpp>
 #include "tcqr.hpp"
 #include "utils.hpp"
 
@@ -30,10 +31,12 @@ int main(int argc, char** argv){
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<input_t>(M * N);
 	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<output_t>(M * N);
 	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<output_t>(M * M);
+	auto d_matrix_qr = cutf::cuda::memory::get_device_unique_ptr<output_t>(M * N);
 
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<input_t>(M * N);
 	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<input_t>(M * N);
 	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<input_t>(M * M);
+	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<input_t>(M * N);
 
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-rand_range, rand_range);
@@ -51,4 +54,23 @@ int main(int argc, char** argv){
 	utils::print_matrix(h_matrix_q.get(), M, M, std::string("Q").c_str());
 	std::cout<<std::endl;
 	utils::print_matrix(h_matrix_r.get(), M, N, std::string("R").c_str());
+	std::cout<<std::endl;
+
+
+	// 検証
+	output_t one = cutf::cuda::type::cast<output_t>(1.0f);
+	output_t zero = cutf::cuda::type::cast<output_t>(0.0f);
+	auto cublas = cutf::cublas::get_cublas_unique_ptr();
+	cutf::cublas::gemm(
+			*cublas.get(),
+			CUBLAS_OP_N, CUBLAS_OP_N,
+			M, N, M,
+			&one,
+			d_matrix_r.get(), M,
+			d_matrix_q.get(), M,
+			&zero,
+			d_matrix_qr.get(), M
+			);
+	cutf::cuda::memory::copy(h_matrix_qr.get(), d_matrix_qr.get(), M * N);
+	utils::print_matrix(h_matrix_qr.get(), M, N, std::string("R").c_str());
 }
