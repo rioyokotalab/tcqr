@@ -36,6 +36,35 @@ __device__ void copy_16x16(T* const dest_ptr, const S* const src_ptr, unsigned w
 	}
 }
 template <class T, class S>
+__device__ void copy_16x16(T* const dest_ptr, const S* const src_ptr, std::size_t m, std::size_t n, unsigned warp_id){
+#pragma unroll 
+	for(unsigned i = 0; i < fragment_dimension * fragment_dimension / warp_size; i++){
+		const auto index = warp_size * i + warp_id;
+		const auto x = index / fragment_dimension;
+		const auto y = index % fragment_dimension;
+		auto val = cutf::cuda::type::cast<T>(0.0f);
+		if(x < m && y < n)
+			val = cutf::cuda::type::cast<T>(src_ptr[x * m + y]);;
+
+		dest_ptr[index] = val;
+	}
+}
+// TODO : 結合アクセス
+template <class T, class S>
+__device__ void copy_16x16(T* const dest_ptr, std::size_t m, std::size_t n, const S* const src_ptr, unsigned warp_id){
+#pragma unroll 
+	for(unsigned i = 0; i < fragment_dimension * fragment_dimension / warp_size; i++){
+		const auto index = warp_size * i + warp_id;
+		const auto x = index / fragment_dimension;
+		const auto y = index % fragment_dimension;
+		auto val = cutf::cuda::type::cast<T>(0.0f);
+		if(x < m && y < n)
+			val = cutf::cuda::type::cast<T>(src_ptr[index]);;
+
+		dest_ptr[x * m + y] = val;
+	}
+}
+template <class T, class S>
 __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp_id){
 	if(warp_id < fragment_dimension){
 		dest_ptr[warp_id] = cutf::cuda::type::cast<T>(src_ptr[warp_id]);
