@@ -148,7 +148,7 @@ __device__ void qr16x16tc_core<half, half, half>(half* const out_q, half* const 
 
 		const auto norm_u = cutf::cuda::math::sqrt(get_norm2_16(u, m, warp_id));
 		if(warp_id == k){
-			u[warp_id] += norm_u * cutf::cuda::math::sign(norm_u);
+			u[warp_id] += norm_u * cutf::cuda::math::sign(u[warp_id]);
 		}
 		
 		const auto norm_u2 = get_norm2_16(u, m, warp_id);
