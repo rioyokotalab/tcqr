@@ -63,7 +63,7 @@ int main(int argc, char** argv){
 	auto cublas = cutf::cublas::get_cublas_unique_ptr();
 	cutf::cublas::gemm(
 			*cublas.get(),
-			CUBLAS_OP_N, CUBLAS_OP_N,
+			CUBLAS_OP_T, CUBLAS_OP_N,
 			M, N, M,
 			&one,
 			d_matrix_q.get(), M,
