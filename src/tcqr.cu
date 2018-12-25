@@ -54,9 +54,9 @@ __device__ void copy_16x16(T* const dest_ptr, const S* const src_ptr, std::size_
 		const auto index = warp_size * i + warp_id;
 		const auto x = index / fragment_dimension;
 		const auto y = index % fragment_dimension;
-		auto val = cutf::cuda::type::cast<T>(0.0f);
+		auto val = cutf::cuda::type::cast<S>(0.0f);
 		if(x < n && y < m)
-			val = cutf::cuda::type::cast<T>(src_ptr[x * m + y]);;
+			val = cutf::cuda::type::cast<S>(src_ptr[x * m + y]);;
 
 		dest_ptr[index] = val;
 	}
@@ -69,9 +69,8 @@ __device__ void copy_16x16(T* const dest_ptr, std::size_t m, std::size_t n, cons
 		const auto index = warp_size * i + warp_id;
 		const auto x = index / fragment_dimension;
 		const auto y = index % fragment_dimension;
-		auto val = cutf::cuda::type::cast<T>(0.0f);
 		if(x < n && y < m)
-			dest_ptr[x * m + y] = cutf::cuda::type::cast<T>(src_ptr[index]);
+			dest_ptr[x * m + y] = cutf::cuda::type::cast<S>(src_ptr[index]);
 	}
 }
 template <class T, class S>
