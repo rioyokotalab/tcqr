@@ -3,10 +3,22 @@
 #include <cutf/type.hpp>
 #include <cutf/math.hpp>
 #include "tcqr.hpp"
+#include "utils.hpp"
+
+#define DEBUG
 
 namespace{
 constexpr std::size_t warp_size = 32; // 本当はwarpSizeを使いたい
 constexpr unsigned fragment_dimension = 16;
+
+template <class Func>
+__device__ void debug_func(unsigned warp_id,	Func run_func){
+#ifdef DEBUG
+	if(warp_id == 0){
+		run_func();
+	}
+#endif
+}
 
 // 2乗和
 // sum(ptr[start_id] : ptr[15])
