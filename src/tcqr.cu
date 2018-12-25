@@ -151,15 +151,30 @@ __device__ void qr16x16tc_core<half, half, half>(half* const out_q, half* const 
 	__shared__ half u[fragment_dimension];
 
 	for(std::size_t k = 0; k < n; k++){
+		debug_func(warp_id,
+				[&k](){printf(
+					"//---------------------\n"
+					"// k = %lu\n"
+					"//---------------------\n"
+					, k);});
+		debug_func(warp_id,
+				[&m, &n, &out_r](){utils::print_matrix(out_r, 16, 16, "r");});
+		debug_func(warp_id,
+				[&m, &out_q](){utils::print_matrix(out_q, 16, 16, "q");});
+
 		copy_16(u, out_r + fragment_dimension * k, warp_id);
 		if(warp_id < k){
 			u[warp_id] = cutf::cuda::type::cast<half>(0.0f);
 		}
+		debug_func(warp_id,
+				[](){utils::print_matrix(u, 1, 16, "u");});
 
 		const auto norm_u = cutf::cuda::math::sqrt(get_norm2_16(u, m, warp_id));
 		if(warp_id == k){
 			u[warp_id] += norm_u * cutf::cuda::math::sign(u[warp_id]);
 		}
+		debug_func(warp_id,
+				[](){utils::print_matrix(u, 1, 16, "u+");});
 		
 		const auto norm_u2 = get_norm2_16(u, m, warp_id);
 		make_h(h, u, norm_u2, warp_id);
