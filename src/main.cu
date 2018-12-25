@@ -72,5 +72,5 @@ int main(int argc, char** argv){
 			d_matrix_qr.get(), M
 			);
 	cutf::cuda::memory::copy(h_matrix_qr.get(), d_matrix_qr.get(), M * N);
-	utils::print_matrix(h_matrix_qr.get(), M, N, std::string("R").c_str());
+	utils::print_matrix(h_matrix_qr.get(), M, N, std::string("QR").c_str());
 }
