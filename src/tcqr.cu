@@ -80,6 +80,21 @@ __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp
 	}
 }
 
+// 行列積
+template <class T>
+__device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, unsigned warp_id){
+	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
+	const auto start_j = (warp_id >> 1);
+
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		T sum = 0.0f;
+		for(std::size_t k = 0; k < fragment_dimension; k++){
+			sum += a[fragment_dimension * i + k] * b[fragment_dimension * j + k];
+		}
+		c[fragment_dimension * j + i] = sum;
+	}
+}
+
 template <class T>
 __device__ void make_identity_matrix(T* const dest_ptr, std::size_t m, unsigned warp_id){
 	for(unsigned i = 0; i < fragment_dimension * fragment_dimension / warp_size; i++){
