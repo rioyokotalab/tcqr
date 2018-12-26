@@ -84,7 +84,7 @@ __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp
 template <class T>
 __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, unsigned warp_id){
 	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
-	const auto start_j = (warp_id >> 1);
+	const auto j = (warp_id >> 1);
 
 	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
 		T sum = 0.0f;
