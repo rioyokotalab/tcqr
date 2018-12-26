@@ -32,8 +32,10 @@ inline double get_elapsed_time(RunFunc run_func){
 }
 
 template <class T>
-inline void print_value(const T val, const std::string name){
-	std::cout<<std::setw(25)<<name<<" : "<<val<<std::endl;
+inline void print_value(const T val, const std::string name, const std::string unit = ""){
+	std::cout<<std::setw(25)<<name<<" : "<<val;
+	if(unit != "")std::cout<<" ["<<unit<<"]";
+	std::cout<<std::endl;
 }
 
 template <class T>
