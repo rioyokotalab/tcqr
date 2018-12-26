@@ -20,11 +20,10 @@ int main(int argc, char** argv){
 	const auto device_props = cutf::cuda::device::get_properties_vector();
 	for(auto device_id = 0; device_id < device_props.size(); device_id++){
 		const auto &prop = device_props[device_id];
-		std::cout
-			<<"# device "<<device_id<<std::endl
-			<<"  - device name        : "<<prop.name<<std::endl
-			<<"  - compute capability : "<<prop.major<<"."<<prop.minor<<std::endl
-			<<"  - global memory      : "<<(prop.totalGlobalMem/(1<<20))<<" MB"<<std::endl;
+		utils::print_value(device_id, "Device id");
+		utils::print_value(std::to_string(prop.major) + "." + std::to_string(prop.minor), "Compute capability");
+		utils::print_value(prop.name, "Device name");
+		utils::print_value(prop.totalGlobalMem/(1<<20), "Global memory [MB]");
 	}
 	// }}}
 

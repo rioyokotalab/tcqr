@@ -2,6 +2,7 @@
 #define __UTILS_HPP__
 #include <iostream>
 #include <chrono>
+#include <iomanip>
 #include <cutf/type.hpp>
 
 namespace utils {
@@ -28,6 +29,11 @@ inline double get_elapsed_time(RunFunc run_func){
 	run_func();
 	const auto end_clock = std::chrono::system_clock::now();
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(end_clock - start_clock).count() / 1000.0;
+}
+
+template <class T>
+inline void print_value(const T val, const std::string name){
+	std::cout<<std::setw(25)<<name<<" : "<<val<<std::endl;
 }
 } // namespace utils
 
