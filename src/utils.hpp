@@ -1,6 +1,7 @@
 #ifndef __UTILS_HPP__
 #define __UTILS_HPP__
 #include <iostream>
+#include <chrono>
 #include <cutf/type.hpp>
 
 namespace utils {
@@ -18,6 +19,15 @@ __device__ __host__ inline void print_matrix(const T* const ptr, std::size_t m, 
 		}
 		printf("\n");
 	}
+}
+
+// millisecond
+template <class RunFunc>
+inline double get_elapsed_time(RunFunc run_func){
+	const auto start_clock = std::chrono::system_clock::now();
+	run_func();
+	const auto end_clock = std::chrono::system_clock::now();
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(end_clock - start_clock).count() / 1000.0;
 }
 } // namespace utils
 

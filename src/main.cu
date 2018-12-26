@@ -45,9 +45,15 @@ int main(int argc, char** argv){
 	}
 
 	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), M * N);
-	tcqr::qr16x16<input_t, output_t, norm_t, use_tc>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), M, N);
+	auto elapsed_time = utils::get_elapsed_time(
+			[&d_matrix_q, &d_matrix_r, &d_matrix_a](){
+			tcqr::qr16x16<input_t, output_t, norm_t, use_tc>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), M, N);
+			cudaDeviceSynchronize();
+			});
 	cutf::cuda::memory::copy(h_matrix_q.get(), d_matrix_q.get(), M * M);
 	cutf::cuda::memory::copy(h_matrix_r.get(), d_matrix_r.get(), M * N);
+
+	utils::print_value(elapsed_time, "Elapsed time [ms]");
 
 	utils::print_matrix(h_matrix_a.get(), M, N, std::string("A").c_str());
 	std::cout<<std::endl;
