@@ -5,7 +5,7 @@
 #include "tcqr.hpp"
 #include "utils.hpp"
 
-#define DEBUG
+//#define DEBUG
 
 namespace{
 constexpr std::size_t warp_size = 32; // 本当はwarpSizeを使いたい
