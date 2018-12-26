@@ -53,6 +53,7 @@ int main(int argc, char** argv){
 			});
 	cutf::cuda::memory::copy(h_matrix_q.get(), d_matrix_q.get(), M * M);
 	cutf::cuda::memory::copy(h_matrix_r.get(), d_matrix_r.get(), M * N);
+	utils::print_value(elapsed_time, "Elapsed time [ms]");
 
 	// 検証
 	output_t one = cutf::cuda::type::cast<output_t>(1.0f);
