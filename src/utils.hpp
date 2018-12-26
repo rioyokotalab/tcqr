@@ -32,8 +32,23 @@ inline double get_elapsed_time(RunFunc run_func){
 }
 
 template <class T>
-inline void print_value(const T val, const std::string name){
-	std::cout<<std::setw(25)<<name<<" : "<<val<<std::endl;
+inline void print_value(const T val, const std::string name, const std::string unit = ""){
+	std::cout<<std::setw(25)<<name<<" : "<<val;
+	if(unit != "")std::cout<<" ["<<unit<<"]";
+	std::cout<<std::endl;
+}
+
+template <class T>
+inline double get_error(const T* const matrix_a, const T* const matrix_b, const std::size_t m, const std::size_t n){
+	double norm = 0.0;
+	double norm_a = 0.0;
+	for(std::size_t i = 0; i < m * n; i++){
+		const auto tmp = cutf::cuda::type::cast<double>(matrix_a[i]) - cutf::cuda::type::cast<double>(matrix_b[i]);
+		norm += tmp * tmp;
+		const auto tmp_a = cutf::cuda::type::cast<double>(matrix_a[i]);
+		norm_a += tmp_a * tmp_a;
+	}
+	return std::sqrt(norm / norm_a);
 }
 } // namespace utils
 

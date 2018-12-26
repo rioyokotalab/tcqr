@@ -7,6 +7,8 @@
 #include "tcqr.hpp"
 #include "utils.hpp"
 
+// #define PRINT_MATRIX
+
 constexpr std::size_t M = 16;
 constexpr std::size_t N = 16;
 constexpr float rand_range = 1.0f;
@@ -23,7 +25,8 @@ int main(int argc, char** argv){
 		utils::print_value(device_id, "Device id");
 		utils::print_value(std::to_string(prop.major) + "." + std::to_string(prop.minor), "Compute capability");
 		utils::print_value(prop.name, "Device name");
-		utils::print_value(prop.totalGlobalMem/(1<<20), "Global memory [MB]");
+		utils::print_value(prop.totalGlobalMem/(1<<20), "Global memory", "MB");
+		std::cout<<std::endl;
 	}
 	// }}}
 
@@ -51,16 +54,7 @@ int main(int argc, char** argv){
 			});
 	cutf::cuda::memory::copy(h_matrix_q.get(), d_matrix_q.get(), M * M);
 	cutf::cuda::memory::copy(h_matrix_r.get(), d_matrix_r.get(), M * N);
-
-	utils::print_value(elapsed_time, "Elapsed time [ms]");
-
-	utils::print_matrix(h_matrix_a.get(), M, N, std::string("A").c_str());
-	std::cout<<std::endl;
-	utils::print_matrix(h_matrix_q.get(), M, M, std::string("Q").c_str());
-	std::cout<<std::endl;
-	utils::print_matrix(h_matrix_r.get(), M, N, std::string("R").c_str());
-	std::cout<<std::endl;
-
+	utils::print_value(elapsed_time, "Elapsed time", "ms");
 
 	// 検証
 	output_t one = cutf::cuda::type::cast<output_t>(1.0f);
@@ -77,5 +71,17 @@ int main(int argc, char** argv){
 			d_matrix_qr.get(), M
 			);
 	cutf::cuda::memory::copy(h_matrix_qr.get(), d_matrix_qr.get(), M * N);
+
+#ifdef PRINT_MATRIX
+	utils::print_matrix(h_matrix_a.get(), M, N, std::string("A").c_str());
+	std::cout<<std::endl;
+	utils::print_matrix(h_matrix_q.get(), M, M, std::string("Q").c_str());
+	std::cout<<std::endl;
+	utils::print_matrix(h_matrix_r.get(), M, N, std::string("R").c_str());
+	std::cout<<std::endl;
 	utils::print_matrix(h_matrix_qr.get(), M, N, std::string("QR").c_str());
+#endif
+
+	const auto error = utils::get_error(h_matrix_a.get(), h_matrix_qr.get(), M, N);
+	utils::print_value(error , "error");
 }
