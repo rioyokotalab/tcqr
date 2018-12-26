@@ -151,6 +151,17 @@ __device__ void update_QR_tc(
 	nvcuda::wmma::store_matrix_sync(out_q, out_q_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 }
+template <class T>
+__device__ void update_QR(
+		T* const out_q, 
+		T* const out_r, 
+		const T* const in_q, 
+		const T* const in_r, 
+		const T* const in_h){
+	// TODO : hの再利用
+	matmul_16x16_TN(out_q, in_h, in_q);
+	matmul_16x16_TN(out_r, in_h, in_r);
+}
 
 // tcqr
 // 入出力はShared memoryで
