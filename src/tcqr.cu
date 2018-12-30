@@ -158,22 +158,24 @@ __device__ void update_QR_tc(
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 }
 template <class T, bool UseTC>
-__device__ void update_QR_homogeneous(
-		T* const out_q, 
-		T* const out_r, 
-		const T* const in_q, 
-		const T* const in_r, 
-		const T* const in_h,
-		unsigned warp_id){
-	// TODO : hの再利用
-	if(UseTC){
+__device__ void update_QR_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id);
+template <>
+__device__ void update_QR_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-		update_QR_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
+	update_QR_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
 #endif
-	}else{
-		matmul_16x16_TN(out_q, in_h, in_q, warp_id);
-		matmul_16x16_TN(out_r, in_h, in_r, warp_id);
-	}
+}
+template <>
+__device__ void update_QR_homogeneous<half, false>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+	// TODO : hの再利用
+	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
+	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
+}
+template <>
+__device__ void update_QR_homogeneous<float, false>(float* const out_q, float* const out_r, const float* const in_q, const float* const in_r, const float* const in_h,unsigned warp_id){
+	// TODO : hの再利用
+	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
+	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
 }
 
 // tcqr
