@@ -233,14 +233,14 @@ __device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const s
 		debug_func(warp_id,
 				[](){utils::print_matrix(u, 1, 16, "u");});
 
-		const auto norm_u = cutf::cuda::math::sqrt(get_norm2_16(u, m, warp_id));
+		const auto norm_u = cutf::cuda::math::sqrt(cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id)));
 		if(warp_id == k){
 			u[warp_id] += norm_u * cutf::cuda::math::sign(u[warp_id]);
 		}
 		debug_func(warp_id,
 				[](){utils::print_matrix(u, 1, 16, "u+");});
 
-		const auto norm_u2 = get_norm2_16(u, m, warp_id);
+		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id));
 		make_h(h, u, norm_u2, warp_id);
 		update_qr_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
 	}
