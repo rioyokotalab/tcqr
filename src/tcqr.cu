@@ -149,7 +149,7 @@ __device__ void make_h(T* const h, const S* const u, const S norm_u2, unsigned w
 		if(index % (fragment_dimension + 1) == 0) val = cutf::cuda::type::cast<T>(1.0f);
 		else val = cutf::cuda::type::cast<T>(0.0f);
 
-		val -= cutf::cuda::type::cast<T>(2.0f) * u[x] * u[y] * cutf::cuda::math::rcp(norm_u2);
+		val -= cutf::cuda::type::cast<T>(2.0f) * cutf::cuda::type::cast<T>(u[x] * u[y] * cutf::cuda::math::rcp(norm_u2));
 		h[index] = val;
 	}
 }
