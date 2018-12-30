@@ -309,8 +309,8 @@ __global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* c
 		const auto norm_u2 = get_norm2_16<float, float>(u_f32, m, warp_id);
 		make_h(h_f16, u_f32, norm_u2, warp_id);
 		// q,r の型変換
-		copy_16<half, float>(q_shared_f16, q_shared_f32, warp_id);
-		copy_16<half, float>(r_shared_f16, r_shared_f32, warp_id);
+		copy_16x16<half, float>(q_shared_f16, q_shared_f32, warp_id);
+		copy_16x16<half, float>(r_shared_f16, r_shared_f32, warp_id);
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 		update_qr_tc<half, float>(q_shared_f32, r_shared_f32, q_shared_f16, r_shared_f16, h_f16);
 #endif
