@@ -262,16 +262,64 @@ __global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* cons
 	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
 	copy_16x16<T, T>(q, m, m, q_shared, warp_id);
 }
-} // noname namespace
-
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
-void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
-	if(std::is_same<Output_t, Input_t>::value == true){
-		qr16x16_homogeneous_kernel<Input_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
-	}else{
+__global__ void qr16x16_heterogeneous_kernel(Output_t* const q, Output_t* const r, const Input_t* const a, const std::size_t m, const std::size_t n);
+// 単精度入出力TC使用
+template <>
+__global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* const q, float* const r, const float* const a, const std::size_t m, const std::size_t n){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension];
+	__shared__ float r_shared_f32[fragment_dimension * fragment_dimension];
+	__shared__ half q_shared_f16[fragment_dimension * fragment_dimension];
+	__shared__ half r_shared_f16[fragment_dimension * fragment_dimension];
 
+	copy_16x16(r_shared_f32, a, m, n, warp_id);
+	make_identity_matrix(q_shared_f32, m, warp_id);
+
+	__shared__ half h_f16[fragment_dimension * fragment_dimension];
+	__shared__ float u_f32[fragment_dimension];
+
+	for(std::size_t k = 0; k < n; k++){
+		debug_func(warp_id,
+				[&k](){printf(
+					"//---------------------\n"
+					"// k = %lu\n"
+					"//---------------------\n"
+					, k);});
+		debug_func(warp_id,
+				[&m, &n](){utils::print_matrix(r_shared_f32, 16, 16, "r");});
+		debug_func(warp_id,
+				[&m](){utils::print_matrix(q_shared_f32, 16, 16, "q");});
+
+		copy_16(u_f32, r_shared_f32 + fragment_dimension * k, warp_id);
+		if(warp_id < k){
+			u_f32[warp_id] = 0.0f;
+		}
+		debug_func(warp_id,
+				[](){utils::print_matrix(u_f32, 1, 16, "u");});
+
+		const auto norm_u = cutf::cuda::math::sqrt(get_norm2_16<float, float>(u_f32, m, warp_id));
+		if(warp_id == k){
+			u_f32[warp_id] += norm_u * cutf::cuda::math::sign(u_f32[warp_id]);
+		}
+		debug_func(warp_id,
+				[](){utils::print_matrix(u_f32, 1, 16, "u+");});
+
+		const auto norm_u2 = get_norm2_16<float, float>(u_f32, m, warp_id);
+		make_h(h_f16, u_f32, norm_u2, warp_id);
+		// q,r の型変換
+		copy_16<half, float>(q_shared_f16, q_shared_f32, warp_id);
+		copy_16<half, float>(r_shared_f16, r_shared_f32, warp_id);
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+		update_qr_tc<half, float>(q_shared_f32, r_shared_f32, q_shared_f16, r_shared_f16, h_f16);
+#endif
 	}
+
+	copy_16x16(r, m, n, r_shared_f32, warp_id);
+	copy_16x16(q, m, m, q_shared_f32, warp_id);
 }
+} // noname namespace
 
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, float, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
