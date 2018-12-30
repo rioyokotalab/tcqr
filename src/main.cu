@@ -52,6 +52,13 @@ int main(int argc, char** argv){
 		h_matrix_a.get()[i] = cutf::cuda::type::cast<input_t>(dist(mt));
 	}
 
+	// print type information{{{
+	utils::print_value(get_type_name<input_t>(), "Input type");
+	utils::print_value(get_type_name<output_t>(), "Output type");
+	utils::print_value(get_type_name<norm_t>(), "Norm type");
+	utils::print_value((use_tc ? "true" : "false"), "Use TC?");
+	// }}}
+
 	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), M * N);
 	auto elapsed_time = utils::get_elapsed_time(
 			[&d_matrix_q, &d_matrix_r, &d_matrix_a](){
