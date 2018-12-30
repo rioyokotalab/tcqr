@@ -103,7 +103,9 @@ __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, 
 	 * (start_i, j)は各スレッドの書き込み先の
 	 * 先頭の要素
 	 */
+	// (x % 2) <-> (x & 0x1)
 	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
+	// (x / 2) <-> (x >> 1)
 	const auto j = (warp_id >> 1);
 	T sums[fragment_dimension/2];
 
@@ -246,7 +248,8 @@ __device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const s
 // kernel
 template <class T, class Norm_t, bool UseTC>
 __global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* const a, const std::size_t m, const std::size_t n){
-	const auto warp_id = threadIdx.x & 0xff;
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
 	__shared__ T q_shared[fragment_dimension * fragment_dimension];
 	__shared__ T r_shared[fragment_dimension * fragment_dimension];
 
