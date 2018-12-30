@@ -22,14 +22,15 @@ __device__ void debug_func(unsigned warp_id,	Func run_func){
 }
 
 // 2乗和
+// 内部計算をS型で行い，S型で返す
 // sum(ptr[start_id] : ptr[15])
-template <class T>
-__device__ T get_norm2_16(T* const ptr, const std::size_t size, unsigned warp_id){
-	T tmp = cutf::cuda::type::cast<T>(0.0f);
+template <class T, class S>
+__device__ S get_norm2_16(T* const ptr, const std::size_t size, unsigned warp_id){
+	auto tmp = cutf::cuda::type::cast<S>(0.0f);
 	
 	// load
 	if(warp_id < size){
-		tmp = ptr[warp_id];
+		tmp = cutf::cuda::type::cast<S>(ptr[warp_id]);
 		tmp = tmp * tmp;
 	}
 
