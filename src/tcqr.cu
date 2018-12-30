@@ -89,7 +89,7 @@ __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, 
 	T sums[fragment_dimension/2];
 
 	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
-		T sum = 0.0f;
+		auto sum = cutf::cuda::type::cast<T>(0.0f);
 		for(std::size_t k = 0; k < fragment_dimension; k++){
 			sum += a[fragment_dimension * i + k] * b[fragment_dimension * j + k];
 		}
