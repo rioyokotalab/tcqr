@@ -17,6 +17,12 @@ using input_t = half;
 using output_t = half;
 using norm_t = half;
 
+namespace{
+template <class T>std::string get_type_name();
+template <> std::string get_type_name<float>(){return "float";};
+template <> std::string get_type_name<half>(){return "half";};
+}
+
 int main(int argc, char** argv){
 	// print device information {{{
 	const auto device_props = cutf::cuda::device::get_properties_vector();
