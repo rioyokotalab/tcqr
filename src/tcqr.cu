@@ -115,6 +115,8 @@ __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, 
 		sums[i - start_i] = sum;
 	}
 	__syncthreads();
+
+	// 一度バッファ(レジスタ)に貯めてからメモリに書き込み
 	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
 		c[fragment_dimension * j + i] = sums[i - start_i];
 	}
