@@ -22,14 +22,15 @@ __device__ void debug_func(unsigned warp_id,	Func run_func){
 }
 
 // 2乗和
+// 内部計算をS型で行い，S型で返す
 // sum(ptr[start_id] : ptr[15])
-template <class T>
-__device__ T get_norm2_16(T* const ptr, const std::size_t size, unsigned warp_id){
-	T tmp = cutf::cuda::type::cast<T>(0.0f);
+template <class T, class S>
+__device__ S get_norm2_16(T* const ptr, const std::size_t size, unsigned warp_id){
+	auto tmp = cutf::cuda::type::cast<S>(0.0f);
 	
 	// load
 	if(warp_id < size){
-		tmp = ptr[warp_id];
+		tmp = cutf::cuda::type::cast<S>(ptr[warp_id]);
 		tmp = tmp * tmp;
 	}
 
@@ -232,14 +233,14 @@ __device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const s
 		debug_func(warp_id,
 				[](){utils::print_matrix(u, 1, 16, "u");});
 
-		const auto norm_u = cutf::cuda::math::sqrt(get_norm2_16(u, m, warp_id));
+		const auto norm_u = cutf::cuda::math::sqrt(cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id)));
 		if(warp_id == k){
 			u[warp_id] += norm_u * cutf::cuda::math::sign(u[warp_id]);
 		}
 		debug_func(warp_id,
 				[](){utils::print_matrix(u, 1, 16, "u+");});
 
-		const auto norm_u2 = get_norm2_16(u, m, warp_id);
+		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id));
 		make_h(h, u, norm_u2, warp_id);
 		update_qr_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
 	}
@@ -273,5 +274,7 @@ void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a,
 }
 
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, float, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, float, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<float, float, float, false>(float *const, float *const, const float *const, const std::size_t, const std::size_t);
