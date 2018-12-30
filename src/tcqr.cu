@@ -178,6 +178,8 @@ __device__ void update_QR_tc(
 	nvcuda::wmma::store_matrix_sync(out_q, out_q_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 }
+
+// 入力型を出力型が同一(homogeneous)なq,r更新関数
 template <class T, bool UseTC>
 __device__ void update_QR_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id);
 template <>
