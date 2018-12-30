@@ -1,3 +1,4 @@
+#include <type_traits>
 #include <mma.h>
 #include <cuda_fp16.h>
 #include <cutf/type.hpp>
@@ -230,8 +231,15 @@ __global__ void qr16x16tc_kernel<half, half, half>(half* const q, half* const r,
 
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
-	if(UseTC){
-		qr16x16tc_kernel<Input_t, Output_t, Norm_t><<<1, warp_size>>>(q, r, a, m, n);
+	/*if(UseTC){
+	  qr16x16tc_kernel<Input_t, Output_t, Norm_t><<<1, warp_size>>>(q, r, a, m, n);
+	  }else{
+	  qr16x16_kernel<Input_t, Output_t, Norm_t><<<1, warp_size>>>(q, r, a, m, n);
+	  }*/
+	if(std::is_same<Output_t, Input_t>::value == true){
+		qr16x16_homogeneous_kernel<Input_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
+	}else{
+
 	}
 }
 
