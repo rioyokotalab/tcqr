@@ -82,8 +82,27 @@ __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp
 }
 
 // 行列積
+// Bが対称行列の場合，C <- A * BはC <- A^T * Bと同値
+// 連続メモリアクセスのためTNで計算する
 template <class T>
 __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, unsigned warp_id){
+	/* 行列Cを1ワープで計算する
+	 * スレッドによる分割方法は
+	 * C(列優先) = 
+	 * -------------------- -
+	 * |   |   | ... |    | ^
+	 * | 0 | 2 | ... | 30 | |
+	 * |   |   | ... |    | |
+	 * -------------------- 16
+	 * |   |   | ... |    | |
+	 * | 1 | 3 | ... | 31 | |
+	 * |   |   | ... |    | v
+	 * -------------------- -
+	 * <--------16-------->
+	 * の様に分割する．
+	 * (start_i, j)は各スレッドの書き込み先の
+	 * 先頭の要素
+	 */
 	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
 	const auto j = (warp_id >> 1);
 	T sums[fragment_dimension/2];
