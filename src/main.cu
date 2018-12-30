@@ -17,6 +17,12 @@ using input_t = half;
 using output_t = half;
 using norm_t = half;
 
+namespace{
+template <class T>std::string get_type_name();
+template <> std::string get_type_name<float>(){return "float";};
+template <> std::string get_type_name<half>(){return "half";};
+}
+
 int main(int argc, char** argv){
 	// print device information {{{
 	const auto device_props = cutf::cuda::device::get_properties_vector();
@@ -45,6 +51,13 @@ int main(int argc, char** argv){
 	for(std::size_t i = 0; i < M * N; i++){
 		h_matrix_a.get()[i] = cutf::cuda::type::cast<input_t>(dist(mt));
 	}
+
+	// print type information{{{
+	utils::print_value(get_type_name<input_t>(), "Input type");
+	utils::print_value(get_type_name<output_t>(), "Output type");
+	utils::print_value(get_type_name<norm_t>(), "Norm type");
+	utils::print_value((use_tc ? "true" : "false"), "Use TC?");
+	// }}}
 
 	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), M * N);
 	auto elapsed_time = utils::get_elapsed_time(
