@@ -153,7 +153,7 @@ __device__ void make_h(T* const h, const S* const u, const S norm_u2, unsigned w
 
 // Q,R の更新
 template <class Input_t, class Output_t>
-__device__ void update_QR_tc(
+__device__ void update_qr_tc(
 		Output_t* const out_q, 
 		Output_t* const out_r, 
 		const Input_t* const in_q, 
@@ -181,21 +181,21 @@ __device__ void update_QR_tc(
 
 // 入力型を出力型が同一(homogeneous)なq,r更新関数
 template <class T, bool UseTC>
-__device__ void update_QR_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id);
+__device__ void update_qr_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id);
 template <>
-__device__ void update_QR_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+__device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-	update_QR_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
+	update_qr_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
 #endif
 }
 template <>
-__device__ void update_QR_homogeneous<half, false>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+__device__ void update_qr_homogeneous<half, false>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
 	// TODO : hの再利用
 	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
 	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
 }
 template <>
-__device__ void update_QR_homogeneous<float, false>(float* const out_q, float* const out_r, const float* const in_q, const float* const in_r, const float* const in_h,unsigned warp_id){
+__device__ void update_qr_homogeneous<float, false>(float* const out_q, float* const out_r, const float* const in_q, const float* const in_r, const float* const in_h,unsigned warp_id){
 	// TODO : hの再利用
 	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
 	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
@@ -239,7 +239,7 @@ __device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const s
 
 		const auto norm_u2 = get_norm2_16(u, m, warp_id);
 		make_h(h, u, norm_u2, warp_id);
-		update_QR_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
+		update_qr_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
 	}
 }
 
