@@ -86,13 +86,18 @@ template <class T>
 __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, unsigned warp_id){
 	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
 	const auto j = (warp_id >> 1);
+	T sums[fragment_dimension/2];
 
 	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
 		T sum = 0.0f;
 		for(std::size_t k = 0; k < fragment_dimension; k++){
 			sum += a[fragment_dimension * i + k] * b[fragment_dimension * j + k];
 		}
-		c[fragment_dimension * j + i] = sum;
+		sums[i - start_i] = sum;
+	}
+	__syncthreads();
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		c[fragment_dimension * j + i] = sums[i - start_i];
 	}
 }
 
