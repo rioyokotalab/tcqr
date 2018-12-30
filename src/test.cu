@@ -14,7 +14,7 @@ template <> std::string get_type_name<float>(){return "float";};
 template <> std::string get_type_name<half>(){return "half";};
 }
 
-template <class Input_t, class Output_t, class Norm_t, bool Use_TC>
+template <class Input_t, class Output_t, class Norm_t, bool UseTC, std::size_t test_count>
 void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<Input_t>(m * n);
 	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
@@ -27,10 +27,11 @@ void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
 
 	// print type information{{{
+	utils::print_value(test_count, "Test count");
 	utils::print_value(get_type_name<Input_t>(), "Input type");
 	utils::print_value(get_type_name<Output_t>(), "Output type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
-	utils::print_value((Use_TC ? "true" : "false"), "Use TC?");
+	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
 	// }}}
 
 	// copy
@@ -41,10 +42,11 @@ void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), m * n);
 	auto elapsed_time = utils::get_elapsed_time(
 			[&d_matrix_q, &d_matrix_r, &d_matrix_a, &m, &n](){
-			tcqr::qr16x16<Input_t, Output_t, Norm_t, Use_TC>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), m, n);
+			for(std::size_t c = 0; c < test_count; c++)
+				tcqr::qr16x16<Input_t, Output_t, Norm_t, UseTC>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), m, n);
 			cudaDeviceSynchronize();
 			});
-	utils::print_value(elapsed_time, "Elapsed time", "ms");
+	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
 
 
 	// 検証
