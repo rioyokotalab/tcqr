@@ -274,5 +274,7 @@ void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a,
 }
 
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, float, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, float, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<float, float, float, false>(float *const, float *const, const float *const, const std::size_t, const std::size_t);
