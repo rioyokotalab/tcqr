@@ -1,3 +1,4 @@
+#include <type_traits>
 #include <mma.h>
 #include <cuda_fp16.h>
 #include <cutf/type.hpp>
@@ -80,6 +81,49 @@ __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp
 	}
 }
 
+// 行列積
+// Bが対称行列の場合，C <- A * BはC <- A^T * Bと同値
+// 連続メモリアクセスのためTNで計算する
+template <class T>
+__device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, unsigned warp_id){
+	/* 行列Cを1ワープで計算する
+	 * スレッドによる分割方法は
+	 * C(列優先) = 
+	 * -------------------- -
+	 * |   |   | ... |    | ^
+	 * | 0 | 2 | ... | 30 | |
+	 * |   |   | ... |    | |
+	 * -------------------- 16
+	 * |   |   | ... |    | |
+	 * | 1 | 3 | ... | 31 | |
+	 * |   |   | ... |    | v
+	 * -------------------- -
+	 * <--------16-------->
+	 * の様に分割する．
+	 * (start_i, j)は各スレッドの書き込み先の
+	 * 先頭の要素
+	 */
+	// (x % 2) <-> (x & 0x1)
+	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
+	// (x / 2) <-> (x >> 1)
+	const auto j = (warp_id >> 1);
+	T sums[fragment_dimension/2];
+
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		auto sum = cutf::cuda::type::cast<T>(0.0f);
+		for(std::size_t k = 0; k < fragment_dimension; k++){
+			sum += a[fragment_dimension * i + k] * b[fragment_dimension * j + k];
+		}
+		sums[i - start_i] = sum;
+	}
+	__syncthreads();
+
+	// 一度バッファ(レジスタ)に貯めてからメモリに書き込み
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		c[fragment_dimension * j + i] = sums[i - start_i];
+	}
+}
+
 template <class T>
 __device__ void make_identity_matrix(T* const dest_ptr, std::size_t m, unsigned warp_id){
 	for(unsigned i = 0; i < fragment_dimension * fragment_dimension / warp_size; i++){
@@ -111,7 +155,7 @@ __device__ void make_h(T* const h, const S* const u, const S norm_u2, unsigned w
 
 // Q,R の更新
 template <class Input_t, class Output_t>
-__device__ void update_QR_tc(
+__device__ void update_qr_tc(
 		Output_t* const out_q, 
 		Output_t* const out_r, 
 		const Input_t* const in_q, 
@@ -137,17 +181,37 @@ __device__ void update_QR_tc(
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 }
 
+// 入力型を出力型が同一(homogeneous)なq,r更新関数
+template <class T, bool UseTC>
+__device__ void update_qr_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id);
+template <>
+__device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+	update_qr_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
+#endif
+}
+template <>
+__device__ void update_qr_homogeneous<half, false>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+	// TODO : hの再利用
+	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
+	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
+}
+template <>
+__device__ void update_qr_homogeneous<float, false>(float* const out_q, float* const out_r, const float* const in_q, const float* const in_r, const float* const in_h,unsigned warp_id){
+	// TODO : hの再利用
+	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
+	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
+}
+
 // tcqr
 // 入出力はShared memoryで
 // out_q/out_rの初期化は関数の手前で行っておくこと
 // out_q <- Identity matrix
 // out_r <- a
-template <class Input_t, class Output_t, class Norm_t>
-__device__ void qr16x16tc_core(Output_t* const out_q, Output_t* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id);
-template <>
-__device__ void qr16x16tc_core<half, half, half>(half* const out_q, half* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
-	__shared__ half h[fragment_dimension * fragment_dimension];
-	__shared__ half u[fragment_dimension];
+template <class T, class Norm_t, bool UseTC>
+__device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
+	__shared__ T h[fragment_dimension * fragment_dimension];
+	__shared__ T u[fragment_dimension];
 
 	for(std::size_t k = 0; k < n; k++){
 		debug_func(warp_id,
@@ -163,7 +227,7 @@ __device__ void qr16x16tc_core<half, half, half>(half* const out_q, half* const 
 
 		copy_16(u, out_r + fragment_dimension * k, warp_id);
 		if(warp_id < k){
-			u[warp_id] = cutf::cuda::type::cast<half>(0.0f);
+			u[warp_id] = cutf::cuda::type::cast<T>(0.0f);
 		}
 		debug_func(warp_id,
 				[](){utils::print_matrix(u, 1, 16, "u");});
@@ -174,39 +238,40 @@ __device__ void qr16x16tc_core<half, half, half>(half* const out_q, half* const 
 		}
 		debug_func(warp_id,
 				[](){utils::print_matrix(u, 1, 16, "u+");});
-		
+
 		const auto norm_u2 = get_norm2_16(u, m, warp_id);
 		make_h(h, u, norm_u2, warp_id);
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-		update_QR_tc<half, half>(out_q, out_r, out_q, out_r, h);
-#endif
+		update_qr_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
 	}
 }
 
 // kernel
-template <class Input_t, class Output_t, class Norm_t>
-__global__ void qr16x16tc_kernel(Output_t* const q, Output_t* const r, const Input_t* const a, const std::size_t m, const std::size_t n);
-template <>
-__global__ void qr16x16tc_kernel<half, half, half>(half* const q, half* const r, const half* const a, const std::size_t m, const std::size_t n){
-	const auto warp_id = threadIdx.x & 0xff;
-	__shared__ half q_shared[fragment_dimension * fragment_dimension];
-	__shared__ half r_shared[fragment_dimension * fragment_dimension];
+template <class T, class Norm_t, bool UseTC>
+__global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* const a, const std::size_t m, const std::size_t n){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	__shared__ T q_shared[fragment_dimension * fragment_dimension];
+	__shared__ T r_shared[fragment_dimension * fragment_dimension];
 
-	copy_16x16<half, half>(r_shared, a, m, n, warp_id);
+	copy_16x16<T, T>(r_shared, a, m, n, warp_id);
 	make_identity_matrix(q_shared, m, warp_id);
 
-	qr16x16tc_core<half, half, half>(q_shared, r_shared, m, n, warp_id);
+	qr16x16_homogeneous_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
 
-	copy_16x16<half, half>(r, m, n, r_shared, warp_id);
-	copy_16x16<half, half>(q, m, m, q_shared, warp_id);
+	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
+	copy_16x16<T, T>(q, m, m, q_shared, warp_id);
 }
 } // noname namespace
 
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
-	if(UseTC){
-		qr16x16tc_kernel<Input_t, Output_t, Norm_t><<<1, warp_size>>>(q, r, a, m, n);
+	if(std::is_same<Output_t, Input_t>::value == true){
+		qr16x16_homogeneous_kernel<Input_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
+	}else{
+
 	}
 }
 
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<float, float, float, false>(float *const, float *const, const float *const, const std::size_t, const std::size_t);
