@@ -30,6 +30,7 @@ int main(int argc, char** argv){
 		h_matrix_a.get()[i] = dist(mt);
 	}
 	
+	test::qr<float, float, float, true>(M, N, h_matrix_a.get());
 	test::qr<float, float, float, false>(M, N, h_matrix_a.get());
 	test::qr<half, half, half, true>(M, N, h_matrix_a.get());
 	test::qr<half, half, half, false>(M, N, h_matrix_a.get());

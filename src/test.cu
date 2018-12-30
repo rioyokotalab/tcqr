@@ -87,3 +87,4 @@ template void test::qr<half, half, half, false>(const std::size_t, const std::si
 template void test::qr<half, half, float, true>(const std::size_t, const std::size_t, const float* const);
 template void test::qr<half, half, float, false>(const std::size_t, const std::size_t, const float* const);
 template void test::qr<float, float, float, false>(const std::size_t, const std::size_t, const float* const);
+template void test::qr<float, float, float, true>(const std::size_t, const std::size_t, const float* const);
