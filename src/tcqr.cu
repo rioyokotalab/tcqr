@@ -75,6 +75,21 @@ __device__ void copy_16x16(T* const dest_ptr, std::size_t m, std::size_t n, cons
 			dest_ptr[x * m + y] = cutf::cuda::type::cast<S>(src_ptr[index]);
 	}
 }
+
+// Globalメモリアクセスを結合アクセスにすると遅くなる気がする．
+// 要素位置(x, y)の計算などで差がつくのかも?
+template <class T, class S>
+__device__ void copy_16x16_T(T* const dest_ptr, std::size_t m, std::size_t n, const S* const src_ptr, unsigned warp_id){
+#pragma unroll
+	for(unsigned i = 0; i < fragment_dimension * fragment_dimension / warp_size; i++){
+		const auto index = warp_size * i + warp_id;
+		const auto x = index / fragment_dimension;
+		const auto y = index % fragment_dimension;
+		if(x < n && y < m)
+			dest_ptr[m * y + x] = cutf::cuda::type::cast<S>(src_ptr[index]);
+	}
+}
+
 template <class T, class S>
 __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp_id){
 	if(warp_id < fragment_dimension){
@@ -252,7 +267,7 @@ __global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* cons
 	qr16x16_homogeneous_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
 
 	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
-	copy_16x16<T, T>(q, m, m, q_shared, warp_id);
+	copy_16x16_T<T, T>(q, m, m, q_shared, warp_id);
 }
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 __global__ void qr16x16_heterogeneous_kernel(Output_t* const q, Output_t* const r, const Input_t* const a, const std::size_t m, const std::size_t n);
@@ -309,7 +324,7 @@ __global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* c
 	}
 
 	copy_16x16(r, m, n, r_shared_f32, warp_id);
-	copy_16x16(q, m, m, q_shared_f32, warp_id);
+	copy_16x16_T(q, m, m, q_shared_f32, warp_id);
 }
 } // noname namespace
 
