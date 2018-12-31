@@ -75,18 +75,21 @@ __device__ void copy_16x16(T* const dest_ptr, std::size_t m, std::size_t n, cons
 			dest_ptr[x * m + y] = cutf::cuda::type::cast<S>(src_ptr[index]);
 	}
 }
-// TODO : 結合アクセス
+
+// Globalメモリアクセスを結合アクセスにすると遅くなる気がする．
+// 要素位置(x, y)の計算などで差がつくのかも?
 template <class T, class S>
 __device__ void copy_16x16_T(T* const dest_ptr, std::size_t m, std::size_t n, const S* const src_ptr, unsigned warp_id){
-#pragma unroll 
+#pragma unroll
 	for(unsigned i = 0; i < fragment_dimension * fragment_dimension / warp_size; i++){
 		const auto index = warp_size * i + warp_id;
-		const auto x = index / m;
-		const auto y = index % m;
-		if(index < m * n)
-			dest_ptr[index] = cutf::cuda::type::cast<S>(src_ptr[y * fragment_dimension + x]);
+		const auto x = index / fragment_dimension;
+		const auto y = index % fragment_dimension;
+		if(x < n && y < m)
+			dest_ptr[m * y + x] = cutf::cuda::type::cast<S>(src_ptr[index]);
 	}
 }
+
 template <class T, class S>
 __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp_id){
 	if(warp_id < fragment_dimension){
