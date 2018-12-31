@@ -184,24 +184,16 @@ __device__ void update_qr_tc(
 
 // 入力型を出力型が同一(homogeneous)なq,r更新関数
 template <class T, bool UseTC>
-__device__ void update_qr_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id);
+__device__ void update_qr_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id){
+	// TODO : hの再利用
+	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
+	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
+}
 template <>
 __device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 	update_qr_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
 #endif
-}
-template <>
-__device__ void update_qr_homogeneous<half, false>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
-	// TODO : hの再利用
-	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
-	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
-}
-template <>
-__device__ void update_qr_homogeneous<float, false>(float* const out_q, float* const out_r, const float* const in_q, const float* const in_r, const float* const in_h,unsigned warp_id){
-	// TODO : hの再利用
-	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
-	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
 }
 
 // tcqr
@@ -322,22 +314,14 @@ __global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* c
 } // noname namespace
 
 // if constexpr が使えるようになったら書き直せ!!!!
-/*template <class Input_t, class Output_t, class Norm_t, bool UseTC>
+template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
-	// 2つの型のSharedMemoryを必要とする場合
-	// すなわちF32TCとF32F16混合の場合
-	if(
-			std::is_same<Output_t, float>::value == true && std::is_same<Input_t, float>::value == true && UseTC == true ||
-			std::is_same<Output_t, Input_t>::value == false
-	  ){
-		qr16x16_heterogeneous_kernel<Input_t, Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
-	}else{
-		qr16x16_homogeneous_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
-	}
-}*/
-template <> void tcqr::qr16x16<half, half, half, true>(half *const q, half *const r, const half *const a, const std::size_t m, const std::size_t n){qr16x16_homogeneous_kernel<half, half, true><<<1, warp_size>>>(q, r, a, m, n);};
-template <> void tcqr::qr16x16<half, half, float, true>(half *const q, half *const r, const half *const a, const std::size_t m, const std::size_t n){qr16x16_homogeneous_kernel<half, float, true><<<1, warp_size>>>(q, r, a, m, n);};
-template <> void tcqr::qr16x16<half, half, half, false>(half *const q, half *const r, const half *const a, const std::size_t m, const std::size_t n){qr16x16_homogeneous_kernel<half, half, false><<<1, warp_size>>>(q, r, a, m, n);};
-template <> void tcqr::qr16x16<half, half, float, false>(half *const q, half *const r, const half *const a, const std::size_t m, const std::size_t n){qr16x16_homogeneous_kernel<half, float, false><<<1, warp_size>>>(q, r, a, m, n);};
-template <> void tcqr::qr16x16<float, float, float, false>(float *const q, float *const r, const float *const a, const std::size_t m, const std::size_t n){qr16x16_homogeneous_kernel<float, float, false><<<1, warp_size>>>(q, r, a, m, n);};
+	qr16x16_homogeneous_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
+}
 template <> void tcqr::qr16x16<float, float, float, true>(float *const q, float *const r, const float *const a, const std::size_t m, const std::size_t n){qr16x16_heterogeneous_kernel<float, float, float, true><<<1, warp_size>>>(q, r, a, m, n);};
+template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, float, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<half, half, float, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
+template void tcqr::qr16x16<float, float, float, false>(float *const, float *const, const float *const, const std::size_t, const std::size_t);
+//template <> void tcqr::qr16x16<double, double, double, false>(double *const q, double *const r, const double *const a, const std::size_t m, const std::size_t n){qr16x16_heterogeneous_kernel<double, double, double, true><<<1, warp_size>>>(q, r, a, m, n);};
