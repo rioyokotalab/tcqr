@@ -16,6 +16,10 @@ template <> std::string get_type_name<half>(){return "half";};
 
 template <class Input_t, class Output_t, class Norm_t, bool UseTC, std::size_t test_count>
 void test::qr(const std::size_t m, const std::size_t n, const float* const a){
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 700
+	if(UseTC)
+		std::cout<<"Warning : This device cannot execute CC >= 70 code."<<std::endl;
+#endif
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<Input_t>(m * n);
 	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
 	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * m);
