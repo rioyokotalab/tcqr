@@ -68,7 +68,7 @@ void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 	auto cublas = cutf::cublas::get_cublas_unique_ptr();
 	cutf::cublas::gemm(
 			*cublas.get(),
-			CUBLAS_OP_T, CUBLAS_OP_N,
+			CUBLAS_OP_N, CUBLAS_OP_N,
 			m, n, m,
 			&one,
 			d_matrix_q.get(), m,
