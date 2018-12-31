@@ -12,14 +12,23 @@ namespace{
 template <class T>std::string get_type_name();
 template <> std::string get_type_name<float>(){return "float";};
 template <> std::string get_type_name<half>(){return "half";};
+
+// 副作用があるっぽく見せるために適当なポインタ引数を取るようにする
+// nvccの最適化で消されないようにするため
+__global__ void tc_warning_kernel(void* p){
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 700
+	printf("This device cannot execute code using TensorCore\n");
+#endif
+}
+void tc_warning(){
+	tc_warning_kernel<<<1, 1>>>(nullptr);
+}
 }
 
 template <class Input_t, class Output_t, class Norm_t, bool UseTC, std::size_t test_count>
 void test::qr(const std::size_t m, const std::size_t n, const float* const a){
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 700
 	if(UseTC)
-		std::cout<<"Warning : This device cannot execute CC >= 70 code."<<std::endl;
-#endif
+		tc_warning();
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<Input_t>(m * n);
 	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
 	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * m);
