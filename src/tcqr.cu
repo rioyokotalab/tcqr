@@ -435,4 +435,14 @@ template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, c
 template void tcqr::qr16x16<half, half, float, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<float, float, float, false>(float *const, float *const, const float *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<float, float, float, true>(float *const, float *const, const float *const, const std::size_t, const std::size_t);
-//template <> void tcqr::qr16x16<double, double, double, false>(double *const q, double *const r, const double *const a, const std::size_t m, const std::size_t n){qr16x16_heterogeneous_kernel<double, double, double, true><<<1, warp_size>>>(q, r, a, m, n);};
+
+
+template <class T, class Norm_t, bool UseTC>
+void tcqr::eigen16x16(T* const eigens, const T* const a, std::size_t n){
+	eigen16x16_kernel<T, Norm_t, UseTC><<<1, warp_size>>>(eigens, a, n);
+}
+template void tcqr::eigen16x16<float, float, false>(float* const, const float* const, std::size_t);
+template void tcqr::eigen16x16<half, half, false>(half* const, const half* const, std::size_t);
+template void tcqr::eigen16x16<half, half, true>(half* const, const half* const, std::size_t);
+template void tcqr::eigen16x16<half, float, false>(half* const, const half* const, std::size_t);
+template void tcqr::eigen16x16<half, float, true>(half* const, const half* const, std::size_t);
