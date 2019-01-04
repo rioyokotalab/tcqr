@@ -216,6 +216,8 @@ __device__ void update_qr<half, true>(half* const out_q, half* const out_r, cons
 // out_q/out_rの初期化は関数の手前で行っておくこと
 // out_q <- Identity matrix
 // out_r <- a
+// work_h : 16 x 16 作業用Sharedメモリ
+// work_u : 16 作業用Sharedメモリ
 template <class T, class Norm_t, bool UseTC>
 __device__ void qr16x16_core(T* const out_q, T* const out_r, 
 		T* const work_h, T* const work_u,
