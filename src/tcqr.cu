@@ -197,15 +197,15 @@ __device__ void update_qr_tc(
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 }
 
-// 入力型を出力型が同一(homogeneous)なq,r更新関数
+// 非TCQ,R更新関数
 template <class T, bool UseTC>
-__device__ void update_qr_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id){
+__device__ void update_qr(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id){
 	// TODO : hの再利用
 	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
 	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
 }
 template <>
-__device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+__device__ void update_qr<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 	update_qr_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
 #endif
@@ -249,7 +249,7 @@ __device__ void qr16x16_core(T* const out_q, T* const out_r, const std::size_t m
 
 		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id));
 		make_h(h, u, norm_u2, warp_id);
-		update_qr_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
+		update_qr<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
 	}
 }
 __device__ void qr16x16_f32tc_core(
