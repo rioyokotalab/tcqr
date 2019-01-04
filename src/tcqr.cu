@@ -99,7 +99,6 @@ __device__ void copy_16(T* const dest_ptr, const S* const src_ptr, unsigned warp
 
 // 行列積
 // Bが対称行列の場合，C <- A * BはC <- A^T * Bと同値
-// 連続メモリアクセスのためTNで計算する
 template <class T>
 __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, unsigned warp_id){
 	/* 行列Cを1ワープで計算する
@@ -129,6 +128,45 @@ __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, 
 		auto sum = cutf::cuda::type::cast<T>(0.0f);
 		for(std::size_t k = 0; k < fragment_dimension; k++){
 			sum += a[fragment_dimension * i + k] * b[fragment_dimension * j + k];
+		}
+		sums[i - start_i] = sum;
+	}
+	__syncthreads();
+
+	// 一度バッファ(レジスタ)に貯めてからメモリに書き込み
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		c[fragment_dimension * j + i] = sums[i - start_i];
+	}
+}
+template <class T>
+__device__ void matmul_16x16(T* const c, const T* const a, const T* const b, unsigned warp_id){
+	/* 行列Cを1ワープで計算する
+	 * スレッドによる分割方法は
+	 * C(列優先) = 
+	 * -------------------- -
+	 * |   |   | ... |    | ^
+	 * | 0 | 2 | ... | 30 | |
+	 * |   |   | ... |    | |
+	 * -------------------- 16
+	 * |   |   | ... |    | |
+	 * | 1 | 3 | ... | 31 | |
+	 * |   |   | ... |    | v
+	 * -------------------- -
+	 * <--------16-------->
+	 * の様に分割する．
+	 * (start_i, j)は各スレッドの書き込み先の
+	 * 先頭の要素
+	 */
+	// (x % 2) <-> (x & 0x1)
+	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
+	// (x / 2) <-> (x >> 1)
+	const auto j = (warp_id >> 1);
+	T sums[fragment_dimension/2];
+
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		auto sum = cutf::cuda::type::cast<T>(0.0f);
+		for(std::size_t k = 0; k < fragment_dimension; k++){
+			sum += a[fragment_dimension * k + i] * b[fragment_dimension * j + k];
 		}
 		sums[i - start_i] = sum;
 	}
