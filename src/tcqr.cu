@@ -177,6 +177,7 @@ __device__ void update_qr_tc(
 		const Input_t* const in_q, 
 		const Input_t* const in_r, 
 		const Input_t* const in_h){
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 	nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, fragment_dimension, fragment_dimension, fragment_dimension, half, nvcuda::wmma::col_major> in_h_fragment;
 	nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, fragment_dimension, fragment_dimension, fragment_dimension, half, nvcuda::wmma::col_major> in_q_fragment;
 	nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, fragment_dimension, fragment_dimension, fragment_dimension, half, nvcuda::wmma::col_major> in_r_fragment;
@@ -195,6 +196,7 @@ __device__ void update_qr_tc(
 
 	nvcuda::wmma::store_matrix_sync(out_q, out_q_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
+#endif
 }
 
 // 非TCQ,R更新関数
@@ -206,9 +208,7 @@ __device__ void update_qr(T* const out_q, T* const out_r, const T* const in_q, c
 }
 template <>
 __device__ void update_qr<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 	update_qr_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
-#endif
 }
 
 // tcqr
@@ -288,9 +288,8 @@ __device__ void qr16x16_f32tc_core(
 		// q,r の型変換
 		copy_16x16<half, float>(q_f16, q_f32, warp_id);
 		copy_16x16<half, float>(r_f16, r_f32, warp_id);
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+
 		update_qr_tc<half, float>(q_f32, r_f32, q_f16, r_f16, h_f16);
-#endif
 	}
 }
 
