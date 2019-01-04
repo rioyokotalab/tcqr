@@ -376,6 +376,52 @@ __global__ void qr16x16_kernel<float, float, true>(float* const q, float* const 
 	copy_16x16(r, m, n, r_shared_f32, warp_id);
 	copy_16x16_T(q, m, m, q_shared_f32, warp_id);
 }
+
+// 固有値計算
+template <class T, class Norm_t, bool UseTC>
+__global__ void eigen16x16_kernel(T* const eigens, const T* const a, const std::size_t n){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	__shared__ T q_shared[fragment_dimension * fragment_dimension];
+	__shared__ T r_shared[fragment_dimension * fragment_dimension];
+	__shared__ T h[fragment_dimension * fragment_dimension];
+	__shared__ T u[fragment_dimension];
+
+	copy_16x16<T, T>(r_shared, a, n, n, warp_id);
+	// TODO : 収束判定
+	for(std::size_t i = 0; i < 100000; i++){
+		// QR法 : QR分解部分 {{{
+		make_identity_matrix(q_shared, n, warp_id);
+		qr16x16_core<T, Norm_t, UseTC>(q_shared, r_shared,
+				h, u,
+				n, n, warp_id);
+		// 転置されてしまっているのを修正
+		for(unsigned j = 0; j < fragment_dimension * fragment_dimension / warp_size; j++){
+			const auto index = warp_size * i + warp_id;
+			const auto x = index / fragment_dimension;
+			const auto y = index % fragment_dimension;
+			if(x < y){
+				auto tmp = q_shared[index];
+				auto swap_index = fragment_dimension * y + x;
+				q_shared[index] = q_shared[swap_index];
+				q_shared[swap_index] = tmp;
+			}
+		}
+		// }}}
+
+		// R <- RQ を計算
+		matmul_16x16(r_shared, r_shared, q_shared, warp_id);
+		if(i > 99997){
+			if(warp_id == 0){
+				utils::print_matrix_diag(r_shared, 16, "r");
+				//utils::print_matrix(q_shared, 16, 16, "q^t");
+			}
+		}
+	}
+	if(warp_id < n){
+		eigens[warp_id] = r_shared[(warp_id + 1) * n];
+	}
+}
 } // noname namespace
 
 // if constexpr が使えるようになったら書き直せ!!!!
