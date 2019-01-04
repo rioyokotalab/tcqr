@@ -197,15 +197,15 @@ __device__ void update_qr_tc(
 	nvcuda::wmma::store_matrix_sync(out_r, out_r_fragment, fragment_dimension, nvcuda::wmma::mem_col_major);
 }
 
-// 入力型を出力型が同一(homogeneous)なq,r更新関数
+// 非TCQ,R更新関数
 template <class T, bool UseTC>
-__device__ void update_qr_homogeneous(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id){
+__device__ void update_qr(T* const out_q, T* const out_r, const T* const in_q, const T* const in_r, const T* const in_h,unsigned warp_id){
 	// TODO : hの再利用
 	matmul_16x16_TN(out_q, in_h, in_q, warp_id);
 	matmul_16x16_TN(out_r, in_h, in_r, warp_id);
 }
 template <>
-__device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
+__device__ void update_qr<half, true>(half* const out_q, half* const out_r, const half* const in_q, const half* const in_r, const half* const in_h,unsigned warp_id){
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 	update_qr_tc<half, half>(out_q, out_r, in_q, in_r, in_h);
 #endif
@@ -217,7 +217,7 @@ __device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const
 // out_q <- Identity matrix
 // out_r <- a
 template <class T, class Norm_t, bool UseTC>
-__device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
+__device__ void qr16x16_core(T* const out_q, T* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
 	__shared__ T h[fragment_dimension * fragment_dimension];
 	__shared__ T u[fragment_dimension];
 
@@ -249,44 +249,14 @@ __device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const s
 
 		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id));
 		make_h(h, u, norm_u2, warp_id);
-		update_qr_homogeneous<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
+		update_qr<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
 	}
 }
-
-// kernel
-template <class T, class Norm_t, bool UseTC>
-__global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* const a, const std::size_t m, const std::size_t n){
-	// (x % 32) <-> (x & 0x1f)
-	const auto warp_id = threadIdx.x & 0x1f;
-	__shared__ T q_shared[fragment_dimension * fragment_dimension];
-	__shared__ T r_shared[fragment_dimension * fragment_dimension];
-
-	copy_16x16<T, T>(r_shared, a, m, n, warp_id);
-	make_identity_matrix(q_shared, m, warp_id);
-
-	qr16x16_homogeneous_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
-
-	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
-	copy_16x16_T<T, T>(q, m, m, q_shared, warp_id);
-}
-template <class Input_t, class Output_t, class Norm_t, bool UseTC>
-__global__ void qr16x16_heterogeneous_kernel(Output_t* const q, Output_t* const r, const Input_t* const a, const std::size_t m, const std::size_t n);
-// 単精度入出力TC使用
-template <>
-__global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* const q, float* const r, const float* const a, const std::size_t m, const std::size_t n){
-	// (x % 32) <-> (x & 0x1f)
-	const auto warp_id = threadIdx.x & 0x1f;
-	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension];
-	__shared__ float r_shared_f32[fragment_dimension * fragment_dimension];
-	__shared__ half q_shared_f16[fragment_dimension * fragment_dimension];
-	__shared__ half r_shared_f16[fragment_dimension * fragment_dimension];
-
-	copy_16x16(r_shared_f32, a, m, n, warp_id);
-	make_identity_matrix(q_shared_f32, m, warp_id);
-
-	__shared__ half h_f16[fragment_dimension * fragment_dimension];
-	__shared__ float u_f32[fragment_dimension];
-
+__device__ void qr16x16_f32tc_core(
+		float * const q_f32, float* const r_f32,
+		half* const q_f16, half* const r_f16,
+		float* const u_f32, half* const h_f16,
+		const std::size_t m, const std::size_t n, unsigned warp_id){
 	for(std::size_t k = 0; k < n; k++){
 		debug_func(warp_id,
 				[&k](){printf(
@@ -295,33 +265,71 @@ __global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* c
 					"//---------------------\n"
 					, k);});
 		debug_func(warp_id,
-				[&m, &n](){utils::print_matrix(r_shared_f32, 16, 16, "r");});
+				[&q_f32](){utils::print_matrix(q_f32, 16, 16, "q");});
 		debug_func(warp_id,
-				[&m](){utils::print_matrix(q_shared_f32, 16, 16, "q");});
+				[&r_f32](){utils::print_matrix(r_f32, 16, 16, "r");});
 
-		copy_16(u_f32, r_shared_f32 + fragment_dimension * k, warp_id);
+		copy_16(u_f32, r_f32 + fragment_dimension * k, warp_id);
 		if(warp_id < k){
 			u_f32[warp_id] = 0.0f;
 		}
 		debug_func(warp_id,
-				[](){utils::print_matrix(u_f32, 1, 16, "u");});
+				[&u_f32](){utils::print_matrix(u_f32, 1, 16, "u");});
 
 		const auto norm_u = cutf::cuda::math::sqrt(get_norm2_16<float, float>(u_f32, m, warp_id));
 		if(warp_id == k){
 			u_f32[warp_id] += norm_u * cutf::cuda::math::sign(u_f32[warp_id]);
 		}
 		debug_func(warp_id,
-				[](){utils::print_matrix(u_f32, 1, 16, "u+");});
+				[&u_f32](){utils::print_matrix(u_f32, 1, 16, "u+");});
 
 		const auto norm_u2 = get_norm2_16<float, float>(u_f32, m, warp_id);
 		make_h(h_f16, u_f32, norm_u2, warp_id);
 		// q,r の型変換
-		copy_16x16<half, float>(q_shared_f16, q_shared_f32, warp_id);
-		copy_16x16<half, float>(r_shared_f16, r_shared_f32, warp_id);
+		copy_16x16<half, float>(q_f16, q_f32, warp_id);
+		copy_16x16<half, float>(r_f16, r_f32, warp_id);
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-		update_qr_tc<half, float>(q_shared_f32, r_shared_f32, q_shared_f16, r_shared_f16, h_f16);
+		update_qr_tc<half, float>(q_f32, r_f32, q_f16, r_f16, h_f16);
 #endif
 	}
+}
+
+// kernel
+template <class T, class Norm_t, bool UseTC>
+__global__ void qr16x16_kernel(T* const q, T* const r, const T* const a, const std::size_t m, const std::size_t n){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	__shared__ T q_shared[fragment_dimension * fragment_dimension];
+	__shared__ T r_shared[fragment_dimension * fragment_dimension];
+
+	copy_16x16<T, T>(r_shared, a, m, n, warp_id);
+	make_identity_matrix(q_shared, m, warp_id);
+
+	qr16x16_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
+
+	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
+	copy_16x16_T<T, T>(q, m, m, q_shared, warp_id);
+}
+
+// 単精度入出力TC使用
+__global__ void qr16x16_f32tc_kernel(float* const q, float* const r, const float* const a, const std::size_t m, const std::size_t n){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension];
+	__shared__ float r_shared_f32[fragment_dimension * fragment_dimension];
+	__shared__ half q_shared_f16[fragment_dimension * fragment_dimension];
+	__shared__ half r_shared_f16[fragment_dimension * fragment_dimension];
+	__shared__ half h_shared[fragment_dimension * fragment_dimension];
+	__shared__ float u_shared[fragment_dimension];
+
+	copy_16x16(r_shared_f32, a, m, n, warp_id);
+	make_identity_matrix(q_shared_f32, m, warp_id);
+
+	qr16x16_f32tc_core(q_shared_f32, r_shared_f32,
+			q_shared_f16, r_shared_f16,
+			u_shared, h_shared,
+			m, n, warp_id);
+
 
 	copy_16x16(r, m, n, r_shared_f32, warp_id);
 	copy_16x16_T(q, m, m, q_shared_f32, warp_id);
@@ -331,9 +339,9 @@ __global__ void qr16x16_heterogeneous_kernel<float, float, float, true>(float* c
 // if constexpr が使えるようになったら書き直せ!!!!
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
-	qr16x16_homogeneous_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
+	qr16x16_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
 }
-template <> void tcqr::qr16x16<float, float, float, true>(float *const q, float *const r, const float *const a, const std::size_t m, const std::size_t n){qr16x16_heterogeneous_kernel<float, float, float, true><<<1, warp_size>>>(q, r, a, m, n);};
+template <> void tcqr::qr16x16<float, float, float, true>(float *const q, float *const r, const float *const a, const std::size_t m, const std::size_t n){qr16x16_f32tc_kernel<<<1, warp_size>>>(q, r, a, m, n);};
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, float, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
