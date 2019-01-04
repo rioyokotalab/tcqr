@@ -302,7 +302,6 @@ __global__ void qr16x16_kernel(T* const q, T* const r, const T* const a, const s
 	__shared__ T h[fragment_dimension * fragment_dimension];
 	__shared__ T u[fragment_dimension];
 
-
 	copy_16x16<T, T>(r_shared, a, m, n, warp_id);
 	make_identity_matrix(q_shared, m, warp_id);
 
@@ -332,7 +331,6 @@ __global__ void qr16x16_f32tc_kernel(float* const q, float* const r, const float
 			q_shared_f16, r_shared_f16,
 			u_shared, h_shared,
 			m, n, warp_id);
-
 
 	copy_16x16(r, m, n, r_shared_f32, warp_id);
 	copy_16x16_T(q, m, m, q_shared_f32, warp_id);
