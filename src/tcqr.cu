@@ -217,7 +217,7 @@ __device__ void update_qr_homogeneous<half, true>(half* const out_q, half* const
 // out_q <- Identity matrix
 // out_r <- a
 template <class T, class Norm_t, bool UseTC>
-__device__ void qr16x16_homogeneous_core(T* const out_q, T* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
+__device__ void qr16x16_core(T* const out_q, T* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
 	__shared__ T h[fragment_dimension * fragment_dimension];
 	__shared__ T u[fragment_dimension];
 
@@ -296,7 +296,7 @@ __device__ void qr16x16_f32tc_core(
 
 // kernel
 template <class T, class Norm_t, bool UseTC>
-__global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* const a, const std::size_t m, const std::size_t n){
+__global__ void qr16x16_kernel(T* const q, T* const r, const T* const a, const std::size_t m, const std::size_t n){
 	// (x % 32) <-> (x & 0x1f)
 	const auto warp_id = threadIdx.x & 0x1f;
 	__shared__ T q_shared[fragment_dimension * fragment_dimension];
@@ -305,7 +305,7 @@ __global__ void qr16x16_homogeneous_kernel(T* const q, T* const r, const T* cons
 	copy_16x16<T, T>(r_shared, a, m, n, warp_id);
 	make_identity_matrix(q_shared, m, warp_id);
 
-	qr16x16_homogeneous_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
+	qr16x16_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
 
 	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
 	copy_16x16_T<T, T>(q, m, m, q_shared, warp_id);
@@ -339,7 +339,7 @@ __global__ void qr16x16_f32tc_kernel(float* const q, float* const r, const float
 // if constexpr が使えるようになったら書き直せ!!!!
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
-	qr16x16_homogeneous_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
+	qr16x16_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
 }
 template <> void tcqr::qr16x16<float, float, float, true>(float *const q, float *const r, const float *const a, const std::size_t m, const std::size_t n){qr16x16_f32tc_kernel<<<1, warp_size>>>(q, r, a, m, n);};
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
