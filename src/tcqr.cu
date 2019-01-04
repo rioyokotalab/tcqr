@@ -218,7 +218,7 @@ __device__ void update_qr<half, true>(half* const out_q, half* const out_r, cons
 // out_r <- a
 template <class T, class Norm_t, bool UseTC>
 __device__ void qr16x16_core(T* const out_q, T* const out_r, 
-		T* const h, T* const u,
+		T* const work_h, T* const work_u,
 		const std::size_t m, const std::size_t n, unsigned warp_id){
 	for(std::size_t k = 0; k < n; k++){
 		debug_func(warp_id,
@@ -232,23 +232,23 @@ __device__ void qr16x16_core(T* const out_q, T* const out_r,
 		debug_func(warp_id,
 				[&m, &out_q](){utils::print_matrix(out_q, 16, 16, "q");});
 
-		copy_16(u, out_r + fragment_dimension * k, warp_id);
+		copy_16(work_u, out_r + fragment_dimension * k, warp_id);
 		if(warp_id < k){
-			u[warp_id] = cutf::cuda::type::cast<T>(0.0f);
+			work_u[warp_id] = cutf::cuda::type::cast<T>(0.0f);
 		}
 		debug_func(warp_id,
-				[&u](){utils::print_matrix(u, 1, 16, "u");});
+				[&work_u](){utils::print_matrix(work_u, 1, 16, "u");});
 
-		const auto norm_u = cutf::cuda::math::sqrt(cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id)));
+		const auto norm_u = cutf::cuda::math::sqrt(cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(work_u, m, warp_id)));
 		if(warp_id == k){
-			u[warp_id] += norm_u * cutf::cuda::math::sign(u[warp_id]);
+			work_u[warp_id] += norm_u * cutf::cuda::math::sign(work_u[warp_id]);
 		}
 		debug_func(warp_id,
-				[&u](){utils::print_matrix(u, 1, 16, "u+");});
+				[&work_u](){utils::print_matrix(work_u, 1, 16, "u+");});
 
-		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id));
-		make_h(h, u, norm_u2, warp_id);
-		update_qr<T, UseTC>(out_q, out_r, out_q, out_r, h, warp_id);
+		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(work_u, m, warp_id));
+		make_h(work_h, work_u, norm_u2, warp_id);
+		update_qr<T, UseTC>(out_q, out_r, out_q, out_r, work_h, warp_id);
 	}
 }
 __device__ void qr16x16_f32tc_core(
