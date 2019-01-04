@@ -217,10 +217,9 @@ __device__ void update_qr<half, true>(half* const out_q, half* const out_r, cons
 // out_q <- Identity matrix
 // out_r <- a
 template <class T, class Norm_t, bool UseTC>
-__device__ void qr16x16_core(T* const out_q, T* const out_r, const std::size_t m, const std::size_t n, unsigned warp_id){
-	__shared__ T h[fragment_dimension * fragment_dimension];
-	__shared__ T u[fragment_dimension];
-
+__device__ void qr16x16_core(T* const out_q, T* const out_r, 
+		T* const h, T* const u,
+		const std::size_t m, const std::size_t n, unsigned warp_id){
 	for(std::size_t k = 0; k < n; k++){
 		debug_func(warp_id,
 				[&k](){printf(
@@ -238,14 +237,14 @@ __device__ void qr16x16_core(T* const out_q, T* const out_r, const std::size_t m
 			u[warp_id] = cutf::cuda::type::cast<T>(0.0f);
 		}
 		debug_func(warp_id,
-				[](){utils::print_matrix(u, 1, 16, "u");});
+				[&u](){utils::print_matrix(u, 1, 16, "u");});
 
 		const auto norm_u = cutf::cuda::math::sqrt(cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id)));
 		if(warp_id == k){
 			u[warp_id] += norm_u * cutf::cuda::math::sign(u[warp_id]);
 		}
 		debug_func(warp_id,
-				[](){utils::print_matrix(u, 1, 16, "u+");});
+				[&u](){utils::print_matrix(u, 1, 16, "u+");});
 
 		const auto norm_u2 = cutf::cuda::type::cast<T>(get_norm2_16<T, Norm_t>(u, m, warp_id));
 		make_h(h, u, norm_u2, warp_id);
@@ -300,11 +299,16 @@ __global__ void qr16x16_kernel(T* const q, T* const r, const T* const a, const s
 	const auto warp_id = threadIdx.x & 0x1f;
 	__shared__ T q_shared[fragment_dimension * fragment_dimension];
 	__shared__ T r_shared[fragment_dimension * fragment_dimension];
+	__shared__ T h[fragment_dimension * fragment_dimension];
+	__shared__ T u[fragment_dimension];
+
 
 	copy_16x16<T, T>(r_shared, a, m, n, warp_id);
 	make_identity_matrix(q_shared, m, warp_id);
 
-	qr16x16_core<T, Norm_t, UseTC>(q_shared, r_shared, m, n, warp_id);
+	qr16x16_core<T, Norm_t, UseTC>(q_shared, r_shared,
+			h, u,
+		   	m, n, warp_id);
 
 	copy_16x16<T, T>(r, m, n, r_shared, warp_id);
 	copy_16x16_T<T, T>(q, m, m, q_shared, warp_id);
