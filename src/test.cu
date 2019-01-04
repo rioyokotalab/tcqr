@@ -101,3 +101,41 @@ template void test::qr<half, half, float, true>(const std::size_t, const std::si
 template void test::qr<half, half, float, false>(const std::size_t, const std::size_t, const float* const);
 template void test::qr<float, float, float, false>(const std::size_t, const std::size_t, const float* const);
 template void test::qr<float, float, float, true>(const std::size_t, const std::size_t, const float* const);
+
+
+template <class T, class Norm_t, bool UseTC, std::size_t test_count>
+void test::eigen(const std::size_t n, const float* const a){
+	if(UseTC)
+		tc_warning();
+	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<T>(n * n);
+	auto d_eigens = cutf::cuda::memory::get_device_unique_ptr<T>(n);
+	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(n * n);
+	auto h_eigens = cutf::cuda::memory::get_host_unique_ptr<T>(n);
+
+	// print type information{{{
+	utils::print_value(test_count, "Test count");
+	utils::print_value(get_type_name<T>(), "Input type");
+	utils::print_value(get_type_name<Norm_t>(), "Norm type");
+	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
+	// }}}
+
+	// copy
+	for(std::size_t i = 0; i < n * n; i++){
+		h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(a[i]);
+	}
+	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), n * n);
+	auto elapsed_time = utils::get_elapsed_time(
+			[&d_eigens, &d_matrix_a, &n](){
+			for(std::size_t c = 0; c < test_count; c++)
+			tcqr::eigen16x16<T, Norm_t, UseTC>(d_eigens.get(), d_matrix_a.get(), n);
+			cudaDeviceSynchronize();
+			});
+	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
+}
+
+template void test::eigen<float, float, false>(const std::size_t, const float* const);
+template void test::eigen<half, half, false>(const std::size_t, const float* const);
+template void test::eigen<half, half, true>(const std::size_t, const float* const);
+template void test::eigen<half, float, false>(const std::size_t, const float* const);
+template void test::eigen<half, float, true>(const std::size_t, const float* const);
+//template void test::eigen<float, float, true>(const std::size_t, const float* const);
