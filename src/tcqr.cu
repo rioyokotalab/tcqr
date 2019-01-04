@@ -345,7 +345,6 @@ template <class Input_t, class Output_t, class Norm_t, bool UseTC>
 void tcqr::qr16x16(Output_t *const q, Output_t *const r, const Input_t *const a, const std::size_t m, const std::size_t n){
 	qr16x16_kernel<Output_t, Norm_t, UseTC><<<1, warp_size>>>(q, r, a, m, n);
 }
-//template <> void tcqr::qr16x16<float, float, float, true>(float *const q, float *const r, const float *const a, const std::size_t m, const std::size_t n){qr16x16_f32tc_kernel<<<1, warp_size>>>(q, r, a, m, n);};
 template void tcqr::qr16x16<half, half, half, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, float, true>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
 template void tcqr::qr16x16<half, half, half, false>(half *const, half *const, const half *const, const std::size_t, const std::size_t);
