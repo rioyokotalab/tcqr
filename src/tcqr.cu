@@ -377,7 +377,7 @@ __global__ void qr16x16_kernel<float, float, true>(float* const q, float* const 
 	copy_16x16_T(q, m, m, q_shared_f32, warp_id);
 }
 
-constexpr std::size_t loop_count = 1;
+constexpr std::size_t loop_count = 100;
 
 // 固有値計算
 template <class T, class Norm_t, bool UseTC>
