@@ -407,12 +407,12 @@ __global__ void eigen16x16_kernel(T* const eigens, const T* const a, const std::
 			}
 		// 転置されてしまっているのを修正
 		for(unsigned j = 0; j < fragment_dimension * fragment_dimension / warp_size; j++){
-			const auto index = warp_size * i + warp_id;
+			const auto index = warp_size * j + warp_id;
 			const auto x = index / fragment_dimension;
 			const auto y = index % fragment_dimension;
 			if(x < y){
-				auto tmp = q_shared[index];
-				auto swap_index = fragment_dimension * y + x;
+				const auto tmp = q_shared[index];
+				const auto swap_index = fragment_dimension * y + x;
 				q_shared[index] = q_shared[swap_index];
 				q_shared[swap_index] = tmp;
 			}
