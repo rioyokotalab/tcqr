@@ -2,11 +2,12 @@
 #include <cutf/cublas.hpp>
 #include <cutf/type.hpp>
 #include <cutf/memory.hpp>
+#include <Eigen/Dense>
 #include "test.hpp"
 #include "utils.hpp"
 #include "tcqr.hpp"
 
-// #define PRINT_MATRIX
+#define PRINT_MATRIX
 
 namespace{
 template <class T>std::string get_type_name();
@@ -102,9 +103,33 @@ template void test::qr<half, half, float, false>(const std::size_t, const std::s
 template void test::qr<float, float, float, false>(const std::size_t, const std::size_t, const float* const);
 template void test::qr<float, float, float, true>(const std::size_t, const std::size_t, const float* const);
 
+void eigen_eigen(const float* const a, std::size_t n){
+	Eigen::MatrixXf ma;
+	ma.resize(n, n);
+	for(std::size_t i = 0; i < n; i++){
+		for(std::size_t j = 0; j < n; j++){
+			ma(i, j) = a[i + j * n];
+		}
+	}
+	for(std::size_t i = 0; i < 100; i++){
+		Eigen::HouseholderQR<Eigen::MatrixXf> qr(n, n);
+		qr.compute(ma);
+		Eigen::MatrixXf q = qr.householderQ();
+		Eigen::MatrixXf r = q.transpose() * ma;
+		std::cout<<"// ===="<<std::endl;
+		std::cout<<"count = "<<i<<std::endl;
+		std::cout<<"q = "<<std::endl;
+		std::cout<<q<<std::endl;
+		std::cout<<"r = "<<std::endl;
+		std::cout<<r<<std::endl;
+		ma = r * q;
+	}
+}
+
 
 template <class T, class Norm_t, bool UseTC, std::size_t test_count>
 void test::eigen(const std::size_t n, const float* const a){
+	//eigen_eigen(a, n);return;
 	if(UseTC)
 		tc_warning();
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<T>(n * n);
@@ -131,6 +156,16 @@ void test::eigen(const std::size_t n, const float* const a){
 			cudaDeviceSynchronize();
 			});
 	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
+
+	Eigen::MatrixXf ma;
+	ma.resize(n, n);
+	for(std::size_t i = 0; i < n; i++){
+		for(std::size_t j = 0; j < n; j++){
+			ma(i, j) = a[i + j * n];
+		}
+	}
+	Eigen::EigenSolver<Eigen::MatrixXf> eigensolver(ma);
+	std::cout<<eigensolver.eigenvalues()<<std::endl;
 }
 
 template void test::eigen<float, float, false>(const std::size_t, const float* const);
