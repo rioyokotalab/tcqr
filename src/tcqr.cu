@@ -260,7 +260,7 @@ template <class T, class Norm_t, bool UseTC>
 __device__ void qr16x16_core(T* const out_q, T* const out_r, 
 		T* const work_h, T* const work_u,
 		const std::size_t m, const std::size_t n, unsigned warp_id){
-	for(std::size_t k = 0; k < n; k++){
+	for(std::size_t k = 0; k < n - 1; k++){
 		debug_func(warp_id,
 				[&k](){printf(
 					"//---------------------\n"
@@ -296,7 +296,7 @@ __device__ void qr16x16_f32tc_core(
 		half* const q_f16, half* const r_f16,
 		float* const u_f32, half* const h_f16,
 		const std::size_t m, const std::size_t n, unsigned warp_id){
-	for(std::size_t k = 0; k < n; k++){
+	for(std::size_t k = 0; k < n - 1; k++){
 		debug_func(warp_id,
 				[&k](){printf(
 					"//---------------------\n"
