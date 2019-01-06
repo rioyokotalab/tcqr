@@ -6,7 +6,7 @@
 #include "utils.hpp"
 #include "tcqr.hpp"
 
-#define PRINT_MATRIX
+// #define PRINT_MATRIX
 
 namespace{
 template <class T>std::string get_type_name();
@@ -117,7 +117,9 @@ void test::eigen(const std::size_t n, const float* const a){
 	utils::print_value(get_type_name<T>(), "Input type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
 	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
+#ifdef PRINT_MATRIX
 	utils::print_matrix(a, n, n, "a");
+#endif
 	// }}}
 
 	// copy
@@ -135,6 +137,7 @@ void test::eigen(const std::size_t n, const float* const a){
 
 	cutf::cuda::memory::copy(h_eigens.get(), d_eigens.get(), n);
 	utils::print_matrix(h_eigens.get(), 1, n, "Eigenvalue");
+	std::cout<<std::endl;
 }
 
 template void test::eigen<float, float, false>(const std::size_t, const float* const);
