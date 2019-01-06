@@ -142,6 +142,7 @@ void test::eigen(const std::size_t n, const float* const a){
 	utils::print_value(get_type_name<T>(), "Input type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
 	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
+	utils::print_matrix(a, n, n, "a");
 	// }}}
 
 	// copy
