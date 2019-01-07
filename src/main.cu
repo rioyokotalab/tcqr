@@ -28,22 +28,32 @@ int main(int argc, char** argv){
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-rand_range, rand_range);
 	for(std::size_t i = 0; i < M * N; i++){
-		h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 30.0f : 1.0f);
+		h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 20.0f : 1.0f);
 	}
 	
-	test::qr<float, float, float, true>(M, N, h_matrix_a.get());
-	test::qr<float, float, float, false>(M, N, h_matrix_a.get());
-	test::qr<half, half, half, true>(M, N, h_matrix_a.get());
-	test::qr<half, half, half, false>(M, N, h_matrix_a.get());
-	test::qr<half, half, float, true>(M, N, h_matrix_a.get());
-	test::qr<half, half, float, false>(M, N, h_matrix_a.get());
+	std::cout<<"//---------------- time test"<<std::endl;
+	test::time::qr<float, float, float, true>(M, N, h_matrix_a.get());
+	test::time::qr<float, float, float, false>(M, N, h_matrix_a.get());
+	test::time::qr<half, half, half, true>(M, N, h_matrix_a.get());
+	test::time::qr<half, half, half, false>(M, N, h_matrix_a.get());
+	test::time::qr<half, half, float, true>(M, N, h_matrix_a.get());
+	test::time::qr<half, half, float, false>(M, N, h_matrix_a.get());
 
-	test::eigen<float, float, false>(M, h_matrix_a.get());
-	test::eigen<float, float, true>(M, h_matrix_a.get());
-	test::eigen<half, half, false>(M, h_matrix_a.get());
-	test::eigen<half, half, true>(M, h_matrix_a.get());
-	test::eigen<half, float, false>(M, h_matrix_a.get());
-	test::eigen<half, float, true>(M, h_matrix_a.get());
+	std::cout<<"//---------------- precision test"<<std::endl;
+	test::precision::qr<float, float, float, true>(M, N);
+	test::precision::qr<float, float, float, false>(M, N);
+	test::precision::qr<half, half, half, true>(M, N);
+	test::precision::qr<half, half, half, false>(M, N);
+	test::precision::qr<half, half, float, true>(M, N);
+	test::precision::qr<half, half, float, false>(M, N);
+
+	std::cout<<"//---------------- eigenvalue test"<<std::endl;
+	test::time::eigen<float, float, false>(M, h_matrix_a.get());
+	test::time::eigen<float, float, true>(M, h_matrix_a.get());
+	test::time::eigen<half, half, false>(M, h_matrix_a.get());
+	test::time::eigen<half, half, true>(M, h_matrix_a.get());
+	test::time::eigen<half, float, false>(M, h_matrix_a.get());
+	test::time::eigen<half, float, true>(M, h_matrix_a.get());
 
 	eigenqr::eigen16x16(nullptr, h_matrix_a.get(), M);
 }
