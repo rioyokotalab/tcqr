@@ -360,6 +360,7 @@ __global__ void qr16x16_kernel<float, float, true>(float* const q, float* const 
 	const auto warp_id = threadIdx.x & 0x1f;
 	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension];
 	__shared__ float r_shared_f32[fragment_dimension * fragment_dimension];
+	// 作業用メモリ
 	__shared__ half q_shared_f16[fragment_dimension * fragment_dimension];
 	__shared__ half r_shared_f16[fragment_dimension * fragment_dimension];
 	__shared__ half h_shared[fragment_dimension * fragment_dimension];
@@ -417,6 +418,49 @@ __global__ void eigen16x16_kernel(T* const eigens, const T* const a, const std::
 		eigens[warp_id] = r_shared[warp_id * (fragment_dimension + 1)];
 	}
 }
+template <>
+__global__ void eigen16x16_kernel<float, float, true>(float* const eigens, const float* const a, const std::size_t n){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension];
+	__shared__ float r_shared_f32[fragment_dimension * fragment_dimension];
+	// 作業用メモリ
+	__shared__ half q_shared_f16[fragment_dimension * fragment_dimension];
+	__shared__ half r_shared_f16[fragment_dimension * fragment_dimension];
+	__shared__ half h_shared[fragment_dimension * fragment_dimension];
+	__shared__ float u_shared[fragment_dimension];
+
+	copy_16x16(r_shared_f32, a, n, n, warp_id);
+	make_identity_matrix(q_shared_f32, n, warp_id);
+
+	// TODO : 収束判定
+	for(std::size_t i = 0; i < loop_count; i++){
+		// R <- RQ を計算
+		matmul_16x16(r_shared_f32, r_shared_f32, q_shared_f32, warp_id);
+		// QR法 : QR分解部分 {{{
+		make_identity_matrix(q_shared_f32, n, warp_id);
+		qr16x16_f32tc_core(q_shared_f32, r_shared_f32,
+				q_shared_f16, r_shared_f16,
+				u_shared, h_shared,
+				n, n, warp_id);
+
+		// 転置されてしまっているのを修正
+		for(unsigned j = 0; j < fragment_dimension * fragment_dimension / warp_size; j++){
+			const auto index = warp_size * j + warp_id;
+			const auto x = index / fragment_dimension;
+			const auto y = index % fragment_dimension;
+			if(x < y){
+				const auto tmp = q_shared_f32[index];
+				const auto swap_index = fragment_dimension * y + x;
+				q_shared_f32[index] = q_shared_f32[swap_index];
+				q_shared_f32[swap_index] = tmp;
+			}
+		}
+	}
+	if(warp_id < n){
+		eigens[warp_id] = r_shared_f32[warp_id * (fragment_dimension + 1)];
+	}
+}
 } // noname namespace
 
 template <class Input_t, class Output_t, class Norm_t, bool UseTC>
@@ -435,8 +479,9 @@ template <class T, class Norm_t, bool UseTC>
 void tcqr::eigen16x16(T* const eigens, const T* const a, std::size_t n){
 	eigen16x16_kernel<T, Norm_t, UseTC><<<1, warp_size>>>(eigens, a, n);
 }
-template void tcqr::eigen16x16<float, float, false>(float* const, const float* const, std::size_t);
 template void tcqr::eigen16x16<half, half, false>(half* const, const half* const, std::size_t);
 template void tcqr::eigen16x16<half, half, true>(half* const, const half* const, std::size_t);
 template void tcqr::eigen16x16<half, float, false>(half* const, const half* const, std::size_t);
 template void tcqr::eigen16x16<half, float, true>(half* const, const half* const, std::size_t);
+template void tcqr::eigen16x16<float, float, false>(float* const, const float* const, std::size_t);
+template void tcqr::eigen16x16<float, float, true>(float* const, const float* const, std::size_t);
