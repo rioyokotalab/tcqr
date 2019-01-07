@@ -41,6 +41,7 @@ void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
+	utils::print_value(std::to_string(m) + " x " + std::to_string(n), "Matrix size");
 	utils::print_value(get_type_name<Input_t>(), "Input type");
 	utils::print_value(get_type_name<Output_t>(), "Output type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
