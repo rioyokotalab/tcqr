@@ -31,12 +31,12 @@ int main(int argc, char** argv){
 		h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 30.0f : 1.0f);
 	}
 	
-	/*test::qr<float, float, float, true>(M, N, h_matrix_a.get());
+	test::qr<float, float, float, true>(M, N, h_matrix_a.get());
 	test::qr<float, float, float, false>(M, N, h_matrix_a.get());
 	test::qr<half, half, half, true>(M, N, h_matrix_a.get());
 	test::qr<half, half, half, false>(M, N, h_matrix_a.get());
 	test::qr<half, half, float, true>(M, N, h_matrix_a.get());
-	test::qr<half, half, float, false>(M, N, h_matrix_a.get());*/
+	test::qr<half, half, float, false>(M, N, h_matrix_a.get());
 
 	test::eigen<float, float, false>(M, h_matrix_a.get());
 	test::eigen<float, float, true>(M, h_matrix_a.get());
