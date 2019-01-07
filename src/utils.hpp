@@ -35,7 +35,7 @@ __device__ __host__ inline void print_matrix_diag(const T* const ptr, std::size_
 	printf("\n");
 }
 template <class T>
-__device__ __host__ inline void print_matrix_diag_16(const T* const ptr, std::size_t n, const char *name = nullptr){
+__device__ __host__ inline void print_matrix_diag_16x16(const T* const ptr, std::size_t n, const char *name = nullptr){
 	if(name != nullptr) printf("%s = \n", name);
 	for(int j = 0; j < n; j++){
 		const auto val = cutf::cuda::type::cast<float>(ptr[j * (16 + 1)]);
