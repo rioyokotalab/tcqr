@@ -108,9 +108,9 @@ void test::eigen(const std::size_t n, const float* const a){
 	if(UseTC)
 		tc_warning();
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<T>(n * n);
-	auto d_eigens = cutf::cuda::memory::get_device_unique_ptr<T>(n);
+	auto d_eigenvalues = cutf::cuda::memory::get_device_unique_ptr<T>(n);
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(n * n);
-	auto h_eigens = cutf::cuda::memory::get_host_unique_ptr<T>(n);
+	auto h_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<T>(n);
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
@@ -129,15 +129,15 @@ void test::eigen(const std::size_t n, const float* const a){
 	}
 	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), n * n);
 	auto elapsed_time = utils::get_elapsed_time(
-			[&d_eigens, &d_matrix_a, &n](){
+			[&d_eigenvalues, &d_matrix_a, &n](){
 			for(std::size_t c = 0; c < test_count; c++)
-			tcqr::eigen16x16<T, Norm_t, UseTC>(d_eigens.get(), d_matrix_a.get(), n);
+			tcqr::eigen16x16<T, Norm_t, UseTC>(d_eigenvalues.get(), d_matrix_a.get(), n);
 			cudaDeviceSynchronize();
 			});
 	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
 
-	cutf::cuda::memory::copy(h_eigens.get(), d_eigens.get(), n);
-	utils::print_matrix(h_eigens.get(), 1, n, "Eigenvalue");
+	cutf::cuda::memory::copy(h_eigenvalues.get(), d_eigenvalues.get(), n);
+	utils::print_matrix(h_eigenvalues.get(), 1, n, "Eigenvalue");
 	std::cout<<std::endl;
 }
 
