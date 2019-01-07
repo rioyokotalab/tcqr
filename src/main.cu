@@ -38,6 +38,7 @@ int main(int argc, char** argv){
 	test::qr<half, half, float, false>(M, N, h_matrix_a.get());*/
 
 	test::eigen<float, float, false>(M, h_matrix_a.get());
+	test::eigen<float, float, true>(M, h_matrix_a.get());
 	test::eigen<half, half, false>(M, h_matrix_a.get());
 	test::eigen<half, half, true>(M, h_matrix_a.get());
 	test::eigen<half, float, false>(M, h_matrix_a.get());

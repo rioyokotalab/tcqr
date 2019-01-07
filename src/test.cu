@@ -140,9 +140,9 @@ void test::eigen(const std::size_t n, const float* const a){
 	std::cout<<std::endl;
 }
 
-template void test::eigen<float, float, false>(const std::size_t, const float* const);
 template void test::eigen<half, half, false>(const std::size_t, const float* const);
 template void test::eigen<half, half, true>(const std::size_t, const float* const);
 template void test::eigen<half, float, false>(const std::size_t, const float* const);
 template void test::eigen<half, float, true>(const std::size_t, const float* const);
-//template void test::eigen<float, float, true>(const std::size_t, const float* const);
+template void test::eigen<float, float, false>(const std::size_t, const float* const);
+template void test::eigen<float, float, true>(const std::size_t, const float* const);
