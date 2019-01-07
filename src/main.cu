@@ -5,6 +5,7 @@
 #include <cutf/cublas.hpp>
 #include "utils.hpp"
 #include "test.hpp"
+#include "eigenqr.hpp"
 
 constexpr std::size_t M = 16;
 constexpr std::size_t N = 16;
@@ -27,7 +28,7 @@ int main(int argc, char** argv){
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-rand_range, rand_range);
 	for(std::size_t i = 0; i < M * N; i++){
-		h_matrix_a.get()[i] = dist(mt);
+		h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 30.0f : 1.0f);
 	}
 	
 	test::qr<float, float, float, true>(M, N, h_matrix_a.get());
@@ -36,4 +37,13 @@ int main(int argc, char** argv){
 	test::qr<half, half, half, false>(M, N, h_matrix_a.get());
 	test::qr<half, half, float, true>(M, N, h_matrix_a.get());
 	test::qr<half, half, float, false>(M, N, h_matrix_a.get());
+
+	test::eigen<float, float, false>(M, h_matrix_a.get());
+	test::eigen<float, float, true>(M, h_matrix_a.get());
+	test::eigen<half, half, false>(M, h_matrix_a.get());
+	test::eigen<half, half, true>(M, h_matrix_a.get());
+	test::eigen<half, float, false>(M, h_matrix_a.get());
+	test::eigen<half, float, true>(M, h_matrix_a.get());
+
+	eigenqr::eigen16x16(nullptr, h_matrix_a.get(), M);
 }

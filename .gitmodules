@@ -1,3 +1,6 @@
 [submodule "src/cutf"]
 	path = src/cutf
 	url = https://gitlab.momo86.net/mutsuki/cutf
+[submodule "src/eigen"]
+	path = src/eigen
+	url = https://github.com/eigenteam/eigen-git-mirror

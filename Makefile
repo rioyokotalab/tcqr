@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++14 -I./src/cutf -O3
+CXXFLAGS=-std=c++14 -I./src/cutf -I./src/eigen -O3
 OMPFLAGS=-fopenmp
 NVCC=nvcc
 NVCCFLAGS=$(CXXFLAGS)  --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS) -lcublas -gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70
