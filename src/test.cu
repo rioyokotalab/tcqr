@@ -114,6 +114,7 @@ void test::eigen(const std::size_t n, const float* const a){
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
+	utils::print_value(std::to_string(n) + " x " + std::to_string(n), "Matrix size");
 	utils::print_value(get_type_name<T>(), "Input type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
 	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
