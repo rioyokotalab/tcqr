@@ -61,6 +61,7 @@ void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 			cudaDeviceSynchronize();
 			});
 	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
+	utils::print_value(test_count * 16 * 16 * 16 * 2 * 2 * (n-1) / elapsed_time * 1000.0 / 1000000000.0, "", "GFLOPS");
 
 
 	// 検証
