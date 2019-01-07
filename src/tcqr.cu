@@ -382,7 +382,7 @@ constexpr std::size_t loop_count = 300;
 
 // 固有値計算
 template <class T, class Norm_t, bool UseTC>
-__global__ void eigen16x16_kernel(T* const eigens, const T* const a, const std::size_t n){
+__global__ void eigen16x16_kernel(T* const eigenvalues, const T* const a, const std::size_t n){
 	// (x % 32) <-> (x & 0x1f)
 	const auto warp_id = threadIdx.x & 0x1f;
 	__shared__ T q_shared[fragment_dimension * fragment_dimension];
@@ -415,11 +415,11 @@ __global__ void eigen16x16_kernel(T* const eigens, const T* const a, const std::
 		}
 	}
 	if(warp_id < n){
-		eigens[warp_id] = r_shared[warp_id * (fragment_dimension + 1)];
+		eigenvalues[warp_id] = r_shared[warp_id * (fragment_dimension + 1)];
 	}
 }
 template <>
-__global__ void eigen16x16_kernel<float, float, true>(float* const eigens, const float* const a, const std::size_t n){
+__global__ void eigen16x16_kernel<float, float, true>(float* const eigenvalues, const float* const a, const std::size_t n){
 	// (x % 32) <-> (x & 0x1f)
 	const auto warp_id = threadIdx.x & 0x1f;
 	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension];
@@ -458,7 +458,7 @@ __global__ void eigen16x16_kernel<float, float, true>(float* const eigens, const
 		}
 	}
 	if(warp_id < n){
-		eigens[warp_id] = r_shared_f32[warp_id * (fragment_dimension + 1)];
+		eigenvalues[warp_id] = r_shared_f32[warp_id * (fragment_dimension + 1)];
 	}
 }
 } // noname namespace
