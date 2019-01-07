@@ -5,6 +5,7 @@
 #include <cutf/cublas.hpp>
 #include "utils.hpp"
 #include "test.hpp"
+#include "eigenqr.hpp"
 
 constexpr std::size_t M = 16;
 constexpr std::size_t N = 16;
@@ -43,4 +44,6 @@ int main(int argc, char** argv){
 	test::eigen<half, half, true>(M, h_matrix_a.get());
 	test::eigen<half, float, false>(M, h_matrix_a.get());
 	test::eigen<half, float, true>(M, h_matrix_a.get());
+
+	eigenqr::eigen16x16(nullptr, h_matrix_a.get(), M);
 }
