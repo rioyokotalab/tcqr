@@ -7,6 +7,7 @@
 #include "utils.hpp"
 
 //#define DEBUG
+#define USE_F16X2
 
 namespace{
 constexpr std::size_t warp_size = 32; // 本当はwarpSizeを使いたい
@@ -138,6 +139,7 @@ __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, 
 		c[fragment_dimension * j + i] = sums[i - start_i];
 	}
 }
+#ifdef USE_F16X2
 template <>
 __device__ void matmul_16x16_TN(half* const c, const half* const a, const half* const b, unsigned warp_id){
 	/* 行列Cを1ワープで計算する
@@ -181,6 +183,7 @@ __device__ void matmul_16x16_TN(half* const c, const half* const a, const half* 
 		c[fragment_dimension * j + i] = sums[i - start_i];
 	}
 }
+#endif 
 template <class T>
 __device__ void matmul_16x16(T* const c, const T* const a, const T* const b, unsigned warp_id){
 	/* 行列Cを1ワープで計算する
