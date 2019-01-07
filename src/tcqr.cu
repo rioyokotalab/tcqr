@@ -7,6 +7,7 @@
 #include "utils.hpp"
 
 //#define DEBUG
+#define USE_F16X2
 
 namespace{
 constexpr std::size_t warp_size = 32; // 本当はwarpSizeを使いたい
@@ -138,6 +139,51 @@ __device__ void matmul_16x16_TN(T* const c, const T* const a, const T* const b, 
 		c[fragment_dimension * j + i] = sums[i - start_i];
 	}
 }
+#ifdef USE_F16X2
+template <>
+__device__ void matmul_16x16_TN(half* const c, const half* const a, const half* const b, unsigned warp_id){
+	/* 行列Cを1ワープで計算する
+	 * スレッドによる分割方法は
+	 * C(列優先) = 
+	 * -------------------- -
+	 * |   |   | ... |    | ^
+	 * | 0 | 2 | ... | 30 | |
+	 * |   |   | ... |    | |
+	 * -------------------- 16
+	 * |   |   | ... |    | |
+	 * | 1 | 3 | ... | 31 | |
+	 * |   |   | ... |    | v
+	 * -------------------- -
+	 * <--------16-------->
+	 * の様に分割する．
+	 * (start_i, j)は各スレッドの書き込み先の
+	 * 先頭の要素
+	 */
+	// (x % 2) <-> (x & 0x1)
+	const auto start_i = (warp_id & 0x1) * (fragment_dimension/2);
+	// (x / 2) <-> (x >> 1)
+	const auto j = (warp_id >> 1);
+	half sums[fragment_dimension/2];
+
+	// half2
+	const half2 *b_x2 = (const half2*)(b + fragment_dimension * j);
+
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		const half2 *a_x2 = (const half2*)(a + fragment_dimension * i);
+		auto sum = __float2half2_rn(0.0f);
+		for(std::size_t k = 0; k < fragment_dimension/2 ; k++){
+			sum = __hfma2(a_x2[k], b_x2[k], sum);
+		}
+		sums[i - start_i] = __hadd(__high2half(sum) ,__low2half(sum));
+	}
+	__syncthreads();
+
+	// 一度バッファ(レジスタ)に貯めてからメモリに書き込み
+	for(std::size_t i = start_i; i < fragment_dimension / 2 + start_i; i++){
+		c[fragment_dimension * j + i] = sums[i - start_i];
+	}
+}
+#endif 
 template <class T>
 __device__ void matmul_16x16(T* const c, const T* const a, const T* const b, unsigned warp_id){
 	/* 行列Cを1ワープで計算する
