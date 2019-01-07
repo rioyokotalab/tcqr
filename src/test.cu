@@ -26,7 +26,7 @@ void tc_warning(){
 }
 
 template <class Input_t, class Output_t, class Norm_t, bool UseTC, std::size_t test_count>
-void test::qr(const std::size_t m, const std::size_t n, const float* const a){
+void test::time::qr(const std::size_t m, const std::size_t n, const float* const a){
 	if(UseTC)
 		tc_warning();
 	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<Input_t>(m * n);
@@ -97,15 +97,15 @@ void test::qr(const std::size_t m, const std::size_t n, const float* const a){
 	std::cout<<std::endl;
 }
 
-template void test::qr<half, half, half, true>(const std::size_t, const std::size_t, const float* const);
-template void test::qr<half, half, half, false>(const std::size_t, const std::size_t, const float* const);
-template void test::qr<half, half, float, true>(const std::size_t, const std::size_t, const float* const);
-template void test::qr<half, half, float, false>(const std::size_t, const std::size_t, const float* const);
-template void test::qr<float, float, float, false>(const std::size_t, const std::size_t, const float* const);
-template void test::qr<float, float, float, true>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, half, half, true>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, half, half, false>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, half, float, true>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, half, float, false>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<float, float, float, false>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<float, float, float, true>(const std::size_t, const std::size_t, const float* const);
 
 template <class T, class Norm_t, bool UseTC, std::size_t test_count>
-void test::eigen(const std::size_t n, const float* const a){
+void test::time::eigen(const std::size_t n, const float* const a){
 	//eigen_eigen(a, n);return;
 	if(UseTC)
 		tc_warning();
@@ -143,9 +143,9 @@ void test::eigen(const std::size_t n, const float* const a){
 	std::cout<<std::endl;
 }
 
-template void test::eigen<half, half, false>(const std::size_t, const float* const);
-template void test::eigen<half, half, true>(const std::size_t, const float* const);
-template void test::eigen<half, float, false>(const std::size_t, const float* const);
-template void test::eigen<half, float, true>(const std::size_t, const float* const);
-template void test::eigen<float, float, false>(const std::size_t, const float* const);
-template void test::eigen<float, float, true>(const std::size_t, const float* const);
+template void test::time::eigen<half, half, false>(const std::size_t, const float* const);
+template void test::time::eigen<half, half, true>(const std::size_t, const float* const);
+template void test::time::eigen<half, float, false>(const std::size_t, const float* const);
+template void test::time::eigen<half, float, true>(const std::size_t, const float* const);
+template void test::time::eigen<float, float, false>(const std::size_t, const float* const);
+template void test::time::eigen<float, float, true>(const std::size_t, const float* const);
