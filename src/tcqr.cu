@@ -531,3 +531,8 @@ template void tcqr::eigen16x16<half, float, false>(half* const, const half* cons
 template void tcqr::eigen16x16<half, float, true>(half* const, const half* const, std::size_t);
 template void tcqr::eigen16x16<float, float, false>(float* const, const float* const, std::size_t);
 template void tcqr::eigen16x16<float, float, true>(float* const, const float* const, std::size_t);
+
+template <class Input_t, class Output_t, class Norm_t, bool UseTC>
+void tcqr::qr16x16_batched(Output_t* const* const q, Output_t* const * const r, const Input_t* const* const a, const std::size_t m, const std::size_t n, const std::size_t batch_size){
+	constexpr std::size_t shared_memory_size = 96 * 1024;
+}
