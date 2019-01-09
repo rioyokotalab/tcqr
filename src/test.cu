@@ -123,6 +123,7 @@ void test::precision::qr(const std::size_t m, const std::size_t n){
 	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
 	// }}}
 
+	auto cublas = cutf::cublas::get_cublas_unique_ptr();
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 	float error_sum = 0.0f;
@@ -139,7 +140,6 @@ void test::precision::qr(const std::size_t m, const std::size_t n){
 		// 検証
 		const float one = 1.0f;
 		const float zero = 0.0f;
-		auto cublas = cutf::cublas::get_cublas_unique_ptr();
 		cublasGemmEx(
 				*cublas.get(),
 				CUBLAS_OP_N, CUBLAS_OP_N,
