@@ -26,25 +26,24 @@ void tc_warning(){
 }
 }
 
-template <class Input_t, class Output_t, class Norm_t, bool UseTC, std::size_t test_count>
+template <class T, class Norm_t, bool UseTC, std::size_t test_count>
 void test::time::qr(const std::size_t m, const std::size_t n, const float* const a){
 	if(UseTC)
 		tc_warning();
-	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<Input_t>(m * n);
-	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
-	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * m);
-	auto d_matrix_qr = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
+	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<T>(m * n);
+	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<T>(m * n);
+	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<T>(m * m);
+	auto d_matrix_qr = cutf::cuda::memory::get_device_unique_ptr<float>(m * n);
 
-	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
-	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
-	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * m);
-	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
+	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
+	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
+	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<T>(m * m);
+	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<float>(m * n);
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
 	utils::print_value(std::to_string(m) + " x " + std::to_string(n), "Matrix size");
-	utils::print_value(get_type_name<Input_t>(), "Input type");
-	utils::print_value(get_type_name<Output_t>(), "Output type");
+	utils::print_value(get_type_name<T>(), "Input/Output type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
 	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
 	// }}}
@@ -58,7 +57,7 @@ void test::time::qr(const std::size_t m, const std::size_t n, const float* const
 	auto elapsed_time = utils::get_elapsed_time(
 			[&d_matrix_q, &d_matrix_r, &d_matrix_a, &m, &n](){
 			for(std::size_t c = 0; c < test_count; c++)
-				tcqr::qr16x16<Input_t, Output_t, Norm_t, UseTC>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), m, n);
+				tcqr::qr16x16<T, Norm_t, UseTC>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), m, n);
 			cudaDeviceSynchronize();
 			});
 	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
@@ -93,30 +92,30 @@ void test::time::qr(const std::size_t m, const std::size_t n, const float* const
 	utils::print_matrix(h_matrix_qr.get(), m, n, std::string("QR").c_str());
 #endif
 
-	const auto error = utils::get_error(h_matrix_a.get(), h_matrix_qr.get(), m, n);
+	const auto error = utils::get_error(a, h_matrix_qr.get(), m, n);
 	utils::print_value(error , "error");
 	std::cout<<std::endl;
 }
 
-template <class Input_t, class Output_t, class Norm_t, bool UseTC, std::size_t test_count>
+template <class T, class Norm_t, bool UseTC, std::size_t test_count>
 void test::precision::qr(const std::size_t m, const std::size_t n){
 	if(UseTC)
 		tc_warning();
-	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<Input_t>(m * n);
-	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
-	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * m);
-	auto d_matrix_qr = cutf::cuda::memory::get_device_unique_ptr<Output_t>(m * n);
+	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<T>(m * n);
+	auto d_matrix_r = cutf::cuda::memory::get_device_unique_ptr<T>(m * n);
+	auto d_matrix_q = cutf::cuda::memory::get_device_unique_ptr<T>(m * m);
+	auto d_matrix_qr = cutf::cuda::memory::get_device_unique_ptr<float>(m * n);
 
-	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
-	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
-	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * m);
-	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<Input_t>(m * n);
+	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
+	auto h_matrix_a_f32 = cutf::cuda::memory::get_host_unique_ptr<float>(m * n);
+	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
+	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<T>(m * m);
+	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<float>(m * n);
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
 	utils::print_value(std::to_string(m) + " x " + std::to_string(n), "Matrix size");
-	utils::print_value(get_type_name<Input_t>(), "Input type");
-	utils::print_value(get_type_name<Output_t>(), "Output type");
+	utils::print_value(get_type_name<T>(), "Input/Output type");
 	utils::print_value(get_type_name<Norm_t>(), "Norm type");
 	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
 	// }}}
@@ -155,19 +154,19 @@ void test::precision::qr(const std::size_t m, const std::size_t n){
 	std::cout<<std::endl;
 }
 
-template void test::time::qr<half, half, half, true>(const std::size_t, const std::size_t, const float* const);
-template void test::time::qr<half, half, half, false>(const std::size_t, const std::size_t, const float* const);
-template void test::time::qr<half, half, float, true>(const std::size_t, const std::size_t, const float* const);
-template void test::time::qr<half, half, float, false>(const std::size_t, const std::size_t, const float* const);
-template void test::time::qr<float, float, float, false>(const std::size_t, const std::size_t, const float* const);
-template void test::time::qr<float, float, float, true>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, half, true>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, half, false>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, float, true>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<half, float, false>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<float, float, false>(const std::size_t, const std::size_t, const float* const);
+template void test::time::qr<float, float, true>(const std::size_t, const std::size_t, const float* const);
 
-template void test::precision::qr<half, half, half, true>(const std::size_t, const std::size_t);
-template void test::precision::qr<half, half, half, false>(const std::size_t, const std::size_t);
-template void test::precision::qr<half, half, float, true>(const std::size_t, const std::size_t);
-template void test::precision::qr<half, half, float, false>(const std::size_t, const std::size_t);
-template void test::precision::qr<float, float, float, false>(const std::size_t, const std::size_t);
-template void test::precision::qr<float, float, float, true>(const std::size_t, const std::size_t);
+template void test::precision::qr<half, half, true>(const std::size_t, const std::size_t);
+template void test::precision::qr<half, half, false>(const std::size_t, const std::size_t);
+template void test::precision::qr<half, float, true>(const std::size_t, const std::size_t);
+template void test::precision::qr<half, float, false>(const std::size_t, const std::size_t);
+template void test::precision::qr<float, float, false>(const std::size_t, const std::size_t);
+template void test::precision::qr<float, float, true>(const std::size_t, const std::size_t);
 
 template <class T, class Norm_t, bool UseTC, std::size_t test_count>
 void test::time::eigen(const std::size_t n, const float* const a){
