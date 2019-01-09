@@ -40,8 +40,6 @@ void test::time::qr(const std::size_t m, const std::size_t n, const float* const
 	auto d_matrix_qr = cutf::cuda::memory::get_device_unique_ptr<float>(m * n);
 
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
-	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
-	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<T>(m * m);
 	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<float>(m * n);
 
 	// print type information{{{
@@ -86,6 +84,8 @@ void test::time::qr(const std::size_t m, const std::size_t n, const float* const
 	cutf::cuda::memory::copy(h_matrix_qr.get(), d_matrix_qr.get(), m * n);
 
 #ifdef PRINT_MATRIX
+	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
+	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<T>(m * m);
 	cutf::cuda::memory::copy(h_matrix_q.get(), d_matrix_q.get(), m * m);
 	cutf::cuda::memory::copy(h_matrix_r.get(), d_matrix_r.get(), m * n);
 	utils::print_matrix(h_matrix_a.get(), m, n, std::string("A").c_str());
@@ -113,8 +113,6 @@ void test::precision::qr(const std::size_t m, const std::size_t n){
 
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
 	auto h_matrix_a_f32 = cutf::cuda::memory::get_host_unique_ptr<float>(m * n);
-	auto h_matrix_r = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
-	auto h_matrix_q = cutf::cuda::memory::get_host_unique_ptr<T>(m * m);
 	auto h_matrix_qr = cutf::cuda::memory::get_host_unique_ptr<float>(m * n);
 
 	// print type information{{{
