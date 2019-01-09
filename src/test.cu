@@ -24,6 +24,10 @@ __global__ void tc_warning_kernel(void* p){
 void tc_warning(){
 	tc_warning_kernel<<<1, 1>>>(nullptr);
 }
+template <class T>
+cudaDataType_t get_cuda_data_t();
+template <> cudaDataType_t get_cuda_data_t<half>(){return CUDA_R_16F;}
+template <> cudaDataType_t get_cuda_data_t<float>(){return CUDA_R_32F;}
 }
 
 template <class T, class Norm_t, bool UseTC, std::size_t test_count>
@@ -50,7 +54,7 @@ void test::time::qr(const std::size_t m, const std::size_t n, const float* const
 
 	// copy
 	for(std::size_t i = 0; i < m * n; i++){
-		h_matrix_a.get()[i] = cutf::cuda::type::cast<Input_t>(a[i]);
+		h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(a[i]);
 	}
 
 	cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), m * n);
@@ -65,18 +69,19 @@ void test::time::qr(const std::size_t m, const std::size_t n, const float* const
 
 
 	// 検証
-	Output_t one = cutf::cuda::type::cast<Output_t>(1.0f);
-	Output_t zero = cutf::cuda::type::cast<Output_t>(0.0f);
+	const float one = 1.0f;
+	const float zero = 0.0f;
 	auto cublas = cutf::cublas::get_cublas_unique_ptr();
-	cutf::cublas::gemm(
+	cublasGemmEx(
 			*cublas.get(),
 			CUBLAS_OP_N, CUBLAS_OP_N,
 			m, n, m,
 			&one,
-			d_matrix_q.get(), m,
-			d_matrix_r.get(), m,
+			d_matrix_q.get(), get_cuda_data_t<T>(), m,
+			d_matrix_r.get(), get_cuda_data_t<T>(), m,
 			&zero,
-			d_matrix_qr.get(), m
+			d_matrix_qr.get(), get_cuda_data_t<float>(), m,
+			get_cuda_data_t<float>(), CUBLAS_GEMM_DEFAULT
 			);
 	cutf::cuda::memory::copy(h_matrix_qr.get(), d_matrix_qr.get(), m * n);
 
@@ -126,28 +131,30 @@ void test::precision::qr(const std::size_t m, const std::size_t n){
 	for(std::size_t i = 0; i < test_count; i++){
 		// copy
 		for(std::size_t i = 0; i < m * n; i++){
-			h_matrix_a.get()[i] = cutf::cuda::type::cast<Input_t>(dist(mt));
+			const auto val = dist(mt);
+			h_matrix_a_f32.get()[i] = val;
+			h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(val);
 		}
 
 		cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), m * n);
 
 		// 検証
-		Output_t one = cutf::cuda::type::cast<Output_t>(1.0f);
-		Output_t zero = cutf::cuda::type::cast<Output_t>(0.0f);
+		const float one = 1.0f;
+		const float zero = 0.0f;
 		auto cublas = cutf::cublas::get_cublas_unique_ptr();
-		tcqr::qr16x16<Input_t, Output_t, Norm_t, UseTC>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), m, n);
-		cutf::cublas::gemm(
+		cublasGemmEx(
 				*cublas.get(),
 				CUBLAS_OP_N, CUBLAS_OP_N,
 				m, n, m,
 				&one,
-				d_matrix_q.get(), m,
-				d_matrix_r.get(), m,
+				d_matrix_q.get(), get_cuda_data_t<T>(), m,
+				d_matrix_r.get(), get_cuda_data_t<T>(), m,
 				&zero,
-				d_matrix_qr.get(), m
+				d_matrix_qr.get(), get_cuda_data_t<float>(), m,
+				get_cuda_data_t<float>(), CUBLAS_GEMM_DEFAULT
 				);
 		cutf::cuda::memory::copy(h_matrix_qr.get(), d_matrix_qr.get(), m * n);
-		const auto error = utils::get_error(h_matrix_a.get(), h_matrix_qr.get(), m, n);
+		const auto error = utils::get_error(h_matrix_a_f32.get(), h_matrix_qr.get(), m, n);
 		error_sum += error;
 	}
 	utils::print_value(error_sum/test_count , "error avg");
