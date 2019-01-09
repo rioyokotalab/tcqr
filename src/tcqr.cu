@@ -536,3 +536,9 @@ template <class T, class Norm_t, bool UseTC>
 void tcqr::qr16x16_batched(T* const* const q, T* const * const r, const T* const* const a, const std::size_t m, const std::size_t n, const std::size_t batch_size){
 	constexpr std::size_t shared_memory_size = 96 * 1024;
 }
+template void tcqr::qr16x16_batched<half, half, true>(half *const *const, half *const *const, const half *const *const, const std::size_t, const std::size_t, const std::size_t);
+template void tcqr::qr16x16_batched<half, float, true>(half *const *const, half *const *const, const half *const *const, const std::size_t, const std::size_t, const std::size_t);
+template void tcqr::qr16x16_batched<half, half, false>(half *const *const, half *const *const, const half *const *const, const std::size_t, const std::size_t, const std::size_t);
+template void tcqr::qr16x16_batched<half, float, false>(half *const *const, half *const *const, const half *const *const, const std::size_t, const std::size_t, const std::size_t);
+template void tcqr::qr16x16_batched<float, float, false>(float *const *const, float *const *const, const float *const *const, const std::size_t, const std::size_t, const std::size_t);
+template void tcqr::qr16x16_batched<float, float, true>(float *const *const, float *const *const, const float *const *const, const std::size_t, const std::size_t, const std::size_t);
