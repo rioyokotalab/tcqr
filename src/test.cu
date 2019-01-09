@@ -220,3 +220,69 @@ template void test::time::eigen<half, float, false>(const std::size_t, const flo
 template void test::time::eigen<half, float, true>(const std::size_t, const float* const);
 template void test::time::eigen<float, float, false>(const std::size_t, const float* const);
 template void test::time::eigen<float, float, true>(const std::size_t, const float* const);
+
+template <class T, class Norm_t, bool UseTC, std::size_t test_count>
+void test::time::qr_batched(const std::size_t m, const std::size_t n, const std::size_t batch_size){
+	if(UseTC)
+		tc_warning();
+	auto d_matrix_a_array = cutf::cuda::memory::get_device_unique_ptr<T*>(batch_size);
+	auto d_matrix_q_array = cutf::cuda::memory::get_device_unique_ptr<T*>(batch_size);
+	auto d_matrix_r_array = cutf::cuda::memory::get_device_unique_ptr<T*>(batch_size);
+
+	auto h_matrix_a_array = cutf::cuda::memory::get_host_unique_ptr<T*>(batch_size);
+	auto h_matrix_q_array = cutf::cuda::memory::get_host_unique_ptr<T*>(batch_size);
+	auto h_matrix_r_array = cutf::cuda::memory::get_host_unique_ptr<T*>(batch_size);
+
+	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(m * n);
+	std::mt19937 mt(std::random_device{}());
+	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+
+	for(std::size_t b = 0; b < batch_size; b++){
+		T* a_ptr;
+		T* q_ptr;
+		T* r_ptr;
+		cudaMalloc((void**)&a_ptr, sizeof(T) * m * n);
+		cudaMalloc((void**)&r_ptr, sizeof(T) * m * n);
+		cudaMalloc((void**)&q_ptr, sizeof(T) * m * m);
+
+		for(std::size_t i = 0; i < m * n; i++){
+			h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(dist(mt));
+		}
+		cutf::cuda::memory::copy(a_ptr, h_matrix_a.get(), m * n);
+
+		h_matrix_a_array.get()[b] = a_ptr;
+		h_matrix_q_array.get()[b] = q_ptr;
+		h_matrix_r_array.get()[b] = r_ptr;
+	}
+	utils::print_value(test_count, "Test count");
+	utils::print_value(batch_size, "Batch size");
+	utils::print_value(std::to_string(n) + " x " + std::to_string(n), "Matrix size");
+	utils::print_value(get_type_name<T>(), "Input type");
+	utils::print_value(get_type_name<Norm_t>(), "Norm type");
+	utils::print_value((UseTC ? "true" : "false"), "Use TC?");
+
+	cutf::cuda::memory::copy(d_matrix_a_array.get(), h_matrix_a_array.get(), batch_size);
+	cutf::cuda::memory::copy(d_matrix_q_array.get(), h_matrix_q_array.get(), batch_size);
+	cutf::cuda::memory::copy(d_matrix_r_array.get(), h_matrix_r_array.get(), batch_size);
+	auto elapsed_time = utils::get_elapsed_time(
+			[&d_matrix_q_array, &d_matrix_r_array, &d_matrix_a_array, &m, &n, &batch_size](){
+			for(std::size_t c = 0; c < test_count; c++)
+				tcqr::qr16x16_batched<T, Norm_t, UseTC>(d_matrix_q_array.get(), d_matrix_r_array.get(), d_matrix_a_array.get(), m, n, batch_size);
+			cudaDeviceSynchronize();
+			});
+	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
+	utils::print_value(batch_size * test_count * 16 * 16 * 16 * 2 * 2 * (n-1) / elapsed_time * 1000.0 / 1000000000.0, "", "GFLOPS");
+	std::cout<<std::endl;
+
+	for(std::size_t b = 0; b < batch_size; b++){
+		cudaFree(h_matrix_a_array.get()[b]);
+		cudaFree(h_matrix_q_array.get()[b]);
+		cudaFree(h_matrix_r_array.get()[b]);
+	}
+}
+template void test::time::qr_batched<half, half, true>(const std::size_t, const std::size_t ,const std::size_t);
+template void test::time::qr_batched<half, half, false>(const std::size_t, const std::size_t ,const std::size_t);
+template void test::time::qr_batched<half, float, true>(const std::size_t, const std::size_t ,const std::size_t);
+template void test::time::qr_batched<half, float, false>(const std::size_t, const std::size_t ,const std::size_t);
+template void test::time::qr_batched<float, float, false>(const std::size_t, const std::size_t ,const std::size_t);
+template void test::time::qr_batched<float, float, true>(const std::size_t, const std::size_t ,const std::size_t);

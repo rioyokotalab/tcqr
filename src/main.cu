@@ -7,6 +7,7 @@
 #include "test.hpp"
 #include "eigenqr.hpp"
 
+constexpr std::size_t batch_size = 1024;
 constexpr std::size_t M = 16;
 constexpr std::size_t N = 16;
 constexpr float rand_range = 1.0f;
@@ -56,4 +57,12 @@ int main(int argc, char** argv){
 	test::time::eigen<half, float, true>(M, h_matrix_a.get());
 
 	eigenqr::eigen16x16(nullptr, h_matrix_a.get(), M);
+
+	std::cout<<"//---------------- time test (batched)"<<std::endl;
+	test::time::qr_batched<float, float, true>(M, N, batch_size);
+	test::time::qr_batched<float, float, false>(M, N, batch_size);
+	test::time::qr_batched<half, half, true>(M, N, batch_size);
+	test::time::qr_batched<half, half, false>(M, N, batch_size);
+	test::time::qr_batched<half, float, true>(M, N, batch_size);
+	test::time::qr_batched<half, float, false>(M, N, batch_size);
 }
