@@ -137,6 +137,8 @@ void test::precision::qr(const std::size_t m, const std::size_t n){
 
 		cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), m * n);
 
+		tcqr::qr16x16<T, Norm_t, UseTC>(d_matrix_q.get(), d_matrix_r.get(), d_matrix_a.get(), m, n);
+
 		// 検証
 		const float one = 1.0f;
 		const float zero = 0.0f;
