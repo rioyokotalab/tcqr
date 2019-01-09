@@ -13,6 +13,9 @@ namespace{
 constexpr std::size_t warp_size = 32; // 本当はwarpSizeを使いたい
 constexpr unsigned fragment_dimension = 16;
 
+// 本当は変数テンプレートにしたいけど，sharedメモリのサイズ指定に使えないため断念
+constexpr std::size_t num_matrix_per_block = 8;
+
 template <class Func>
 __device__ void debug_func(unsigned warp_id,	Func run_func){
 #ifdef DEBUG
@@ -423,6 +426,76 @@ __global__ void qr16x16_kernel<float, float, true>(float* const q, float* const 
 	copy_16x16(r, m, n, r_shared_f32, warp_id);
 	copy_16x16_T(q, m, m, q_shared_f32, warp_id);
 }
+// batched kernel
+template <class T, class Norm_t, bool UseTC>
+__global__ void qr16x16_batched_kernel(T* const* const q, T* const* const r, const T* const* const a, const std::size_t m, const std::size_t n, const std::size_t batch_size){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	// threadIdx.x / 32
+	const auto block_id = threadIdx.x >> 5;
+	// matrix_id
+	const auto matrix_id = block_id + num_matrix_per_block * blockIdx.x;
+	if(matrix_id >= batch_size) return;
+
+	__shared__ T q_shared[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ T r_shared[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ T h[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ T u[fragment_dimension * num_matrix_per_block];
+
+	auto const q_ptr = q_shared + block_id * fragment_dimension * fragment_dimension;
+	auto const r_ptr = r_shared + block_id * fragment_dimension * fragment_dimension;
+	auto const h_ptr = h + block_id * fragment_dimension * fragment_dimension;
+	auto const u_ptr = u + block_id * fragment_dimension;
+
+	copy_16x16<T, T>(r_ptr, a[matrix_id], m, n, warp_id);
+	make_identity_matrix(q_ptr, m, warp_id);
+
+	qr16x16_core<T, Norm_t, UseTC>(q_ptr, r_ptr,
+			h_ptr, u_ptr,
+		   	m, n, warp_id);
+
+	copy_16x16<T, T>(r[matrix_id], m, n, r_ptr, warp_id);
+	copy_16x16_T<T, T>(q[matrix_id], m, m, q_ptr, warp_id);
+}
+
+// 単精度入出力TC使用
+template <>
+__global__ void qr16x16_batched_kernel<float, float, true>(float* const* const q, float* const* const r, const float* const* const a, const std::size_t m, const std::size_t n, const std::size_t batch_size){
+	// (x % 32) <-> (x & 0x1f)
+	const auto warp_id = threadIdx.x & 0x1f;
+	// threadIdx.x / 32
+	const auto block_id = threadIdx.x >> 5;
+	// matrix_id
+	const auto matrix_id = block_id + num_matrix_per_block * blockIdx.x;
+	if(matrix_id >= batch_size) return;
+
+	// 1スレッドが
+	__shared__ float q_shared_f32[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ float r_shared_f32[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	// 作業用メモリ
+	__shared__ half q_shared_f16[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ half r_shared_f16[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ half h_shared[fragment_dimension * fragment_dimension * num_matrix_per_block];
+	__shared__ float u_shared[fragment_dimension * num_matrix_per_block];
+
+	auto const q_f16_ptr = q_shared_f16 + block_id * fragment_dimension * fragment_dimension;
+	auto const r_f16_ptr = r_shared_f16 + block_id * fragment_dimension * fragment_dimension;
+	auto const q_f32_ptr = q_shared_f32 + block_id * fragment_dimension * fragment_dimension;
+	auto const r_f32_ptr = r_shared_f32 + block_id * fragment_dimension * fragment_dimension;
+	auto const h_ptr = h_shared + block_id * fragment_dimension * fragment_dimension;
+	auto const u_ptr = u_shared + block_id * fragment_dimension;
+
+	copy_16x16(r_f32_ptr, a[matrix_id] , m, n, warp_id);
+	make_identity_matrix(q_f32_ptr, m, warp_id);
+
+	qr16x16_f32tc_core(q_f32_ptr, r_f32_ptr,
+			q_f16_ptr, r_f16_ptr,
+			u_ptr, h_ptr,
+			m, n, warp_id);
+
+	copy_16x16(r[matrix_id], m, n, r_f32_ptr, warp_id);
+	copy_16x16_T(q[matrix_id], m, m, q_f32_ptr, warp_id);
+}
 
 constexpr std::size_t loop_count = 300;
 
@@ -534,7 +607,10 @@ template void tcqr::eigen16x16<float, float, true>(float* const, const float* co
 
 template <class T, class Norm_t, bool UseTC>
 void tcqr::qr16x16_batched(T* const* const q, T* const * const r, const T* const* const a, const std::size_t m, const std::size_t n, const std::size_t batch_size){
-	constexpr std::size_t shared_memory_size = 96 * 1024;
+	const std::size_t num_threads = batch_size * warp_size;
+	const std::size_t threads_per_block = num_matrix_per_block * warp_size;
+
+	qr16x16_batched_kernel<T, Norm_t, UseTC><<<(num_threads + threads_per_block - 1)/threads_per_block, threads_per_block>>>(q, r, a, m, n, batch_size);
 }
 template void tcqr::qr16x16_batched<half, half, true>(half *const *const, half *const *const, const half *const *const, const std::size_t, const std::size_t, const std::size_t);
 template void tcqr::qr16x16_batched<half, float, true>(half *const *const, half *const *const, const half *const *const, const std::size_t, const std::size_t, const std::size_t);
