@@ -50,15 +50,22 @@ int main(int argc, char** argv){
 	   test::precision::qr<half, half, true>(M, N);
 	   test::precision::qr<half, half, false>(M, N);
 	   test::precision::qr<half, float, true>(M, N);
-	   test::precision::qr<half, float, false>(M, N);*/
+	   test::precision::qr<half, float, false>(M, N);
+	   std::cout<<"//---------------- eigenvalue test"<<std::endl;
+	   test::time::eigen<float, float, false>(M, h_matrix_a.get());
+	   test::time::eigen<float, float, true>(M, h_matrix_a.get());
+	   test::time::eigen<half, half, false>(M, h_matrix_a.get());
+	   test::time::eigen<half, half, true>(M, h_matrix_a.get());
+	   test::time::eigen<half, float, false>(M, h_matrix_a.get());
+	   test::time::eigen<half, float, true>(M, h_matrix_a.get());*/
 
 	std::cout<<"//---------------- eigenvalue test"<<std::endl;
-	test::time::eigen<float, float, false>(M, h_matrix_a.get());
-	test::time::eigen<float, float, true>(M, h_matrix_a.get());
-	test::time::eigen<half, half, false>(M, h_matrix_a.get());
-	test::time::eigen<half, half, true>(M, h_matrix_a.get());
-	test::time::eigen<half, float, false>(M, h_matrix_a.get());
-	test::time::eigen<half, float, true>(M, h_matrix_a.get());
+	test::precision::eigen<float, float, false>(M);
+	test::precision::eigen<float, float, true>(M);
+	test::precision::eigen<half, half, false>(M);
+	test::precision::eigen<half, half, true>(M);
+	test::precision::eigen<half, float, false>(M);
+	test::precision::eigen<half, float, true>(M);
 
 	/*
 	   std::cout<<"//---------------- time test (batched)"<<std::endl;
