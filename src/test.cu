@@ -3,9 +3,11 @@
 #include <cutf/cublas.hpp>
 #include <cutf/type.hpp>
 #include <cutf/memory.hpp>
+#include <algorithm>
 #include "test.hpp"
 #include "utils.hpp"
 #include "tcqr.hpp"
+#include "eigenqr.hpp"
 
 // #define PRINT_MATRIX
 
@@ -184,6 +186,8 @@ void test::time::eigen(const std::size_t n, const float* const a){
 	auto d_eigenvalues = cutf::cuda::memory::get_device_unique_ptr<T>(n);
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(n * n);
 	auto h_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<T>(n);
+	auto h_correct_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<float>(n);
+	auto h_abs_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<float>(n);
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
@@ -210,7 +214,21 @@ void test::time::eigen(const std::size_t n, const float* const a){
 	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
 
 	cutf::cuda::memory::copy(h_eigenvalues.get(), d_eigenvalues.get(), n);
-	utils::print_matrix(h_eigenvalues.get(), 1, n, "Eigenvalue");
+
+	// 絶対値をソート
+	for(std::size_t i = 0; i < n; i++){
+		h_abs_eigenvalues.get()[i] = std::abs(cutf::cuda::type::cast<float>(h_eigenvalues.get()[i]));
+	}
+	std::sort(h_abs_eigenvalues.get(), h_abs_eigenvalues.get() + n, std::greater<float>());
+	utils::print_matrix(h_abs_eigenvalues.get(), 1, n, "Eigenvalue");
+
+	// 正答計算
+	eigenqr::eigen16x16(h_correct_eigenvalues.get(), a, n);
+	utils::print_matrix(h_correct_eigenvalues.get(), 1, n, "Correct Eigenvalue");
+
+	const auto error = utils::get_error(h_abs_eigenvalues.get(), h_correct_eigenvalues.get(), 1, n);
+	utils::print_value(error , "error");
+
 	std::cout<<std::endl;
 }
 
