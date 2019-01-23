@@ -60,12 +60,14 @@ int main(int argc, char** argv){
 	   test::time::eigen<half, float, true>(M, h_matrix_a.get());*/
 
 	std::cout<<"//---------------- eigenvalue test"<<std::endl;
-	test::precision::eigen<float, float, false>(M);
+	/*test::precision::eigen<float, float, false>(M);
 	test::precision::eigen<float, float, true>(M);
 	test::precision::eigen<half, half, false>(M);
 	test::precision::eigen<half, half, true>(M);
 	test::precision::eigen<half, float, false>(M);
-	test::precision::eigen<half, float, true>(M);
+	test::precision::eigen<half, float, true>(M);*/
+
+	test::precision::eigen_all(M);
 
 	/*
 	   std::cout<<"//---------------- time test (batched)"<<std::endl;
