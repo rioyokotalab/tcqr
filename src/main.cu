@@ -28,13 +28,10 @@ int main(int argc, char** argv){
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<float>(M * N);
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-rand_range, rand_range);
+	for(std::size_t i = 0; i < M * N; i++){
+		h_matrix_a.get()[i] = dist(mt);
+	}
 
-	// 固有値がすべて姓になるまでダイスを振る
-	do{
-		for(std::size_t i = 0; i < M * N; i++){
-			h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 10.0f : 1.0f);
-		}
-	}while(!eigenqr::is_real(h_matrix_a.get(), N));
 	std::cout<<"//---------------- qr time test"<<std::endl;
 	test::time::qr<float, float, true>(M, N, h_matrix_a.get());
 	test::time::qr<float, float, false>(M, N, h_matrix_a.get());
@@ -50,6 +47,15 @@ int main(int argc, char** argv){
 	test::precision::qr<half, half, false>(M, N);
 	test::precision::qr<half, float, true>(M, N);
 	test::precision::qr<half, float, false>(M, N);
+
+	// 対称行列の固有値計算
+	for(std::size_t m = 0; m < M; m++){
+		for(std::size_t n = m; n < N; n++){
+			const auto val = dist(mt);
+			h_matrix_a.get()[m + M * n] = val;
+			h_matrix_a.get()[n + N * m] = val;
+		}
+	}
 
 	std::cout<<"//---------------- eigenvalue time test"<<std::endl;
 	test::time::eigen<float, float, false>(M, h_matrix_a.get());
