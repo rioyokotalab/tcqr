@@ -1,5 +1,6 @@
 #include <random>
 #include <iostream>
+#include <ctime>
 #include <cutf/cublas.hpp>
 #include <cutf/type.hpp>
 #include <cutf/memory.hpp>
