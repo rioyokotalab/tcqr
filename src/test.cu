@@ -328,14 +328,16 @@ void test::precision::eigen(const std::size_t n){
 	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 	float error_sum = 0.0f;
 	for(std::size_t i = 0; i < test_count; i++){
-		// 固有値がすべて姓になるまでダイスを振る
-		do{
-			for(std::size_t i = 0; i < n * n; i++){
-				const auto val = dist(mt) * (i % (n + 1) == 0 ? 10.0f : 1.0f);
-				h_matrix_a_f32.get()[i] = val;
-				h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(val);
+		//  対称行列の固有値は実数
+		for(std::size_t i = 0; i < n; i++){
+			for(std::size_t j = i; j < n; j++){
+				const auto val = dist(mt);
+				h_matrix_a_f32.get()[i + j * n] = val;
+				h_matrix_a.get()[i + j * n] = cutf::cuda::type::cast<T>(val);
+				h_matrix_a_f32.get()[j + i * n] = val;
+				h_matrix_a.get()[j + i * n] = cutf::cuda::type::cast<T>(val);
 			}
-		}while(!eigenqr::is_real(h_matrix_a_f32.get(), n));
+		}
 		cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), n * n);
 
 		tcqr::eigen16x16<T, Norm_t, UseTC>(d_eigenvalues.get(), d_matrix_a.get(), n);
