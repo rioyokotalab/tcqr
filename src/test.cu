@@ -332,15 +332,17 @@ float test::precision::eigen(const std::size_t n, const float* const a){
 	float error_sum = 0.0f;
 	std::size_t t = (a == nullptr) ? test_count : 1;
 	for(std::size_t i = 0; i < t; i++){
-		// 固有値がすべて姓になるまでダイスを振る
+		//  対称行列の固有値は実数
 		if(a == nullptr){
-			do{
-				for(std::size_t i = 0; i < n * n; i++){
-					const auto val = dist(mt) * (i % (n + 1) == 0 ? 6.0f : 1.0f);
-					h_matrix_a_f32.get()[i] = val;
-					h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(val);
+			for(std::size_t i = 0; i < n; i++){
+				for(std::size_t j = i; j < n; j++){
+					const auto val = dist(mt);
+					h_matrix_a_f32.get()[i + j * n] = val;
+					h_matrix_a.get()[i + j * n] = cutf::cuda::type::cast<T>(val);
+					h_matrix_a_f32.get()[j + i * n] = val;
+					h_matrix_a.get()[j + i * n] = cutf::cuda::type::cast<T>(val);
 				}
-			}while(!eigenqr::is_real(h_matrix_a_f32.get(), n));
+			}
 		}else{
 			for(std::size_t i = 0; i < n * n; i++){
 				h_matrix_a_f32.get()[i] = a[i];
@@ -385,12 +387,13 @@ void test::precision::eigen_all(const std::size_t n){
 	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 	const auto start_time = std::time(nullptr);
 	for(std::size_t c = 0; c < test_count; c++){
-		do{
-			for(std::size_t i = 0; i < n * n; i++){
-				const auto val = dist(mt) * (i % (n + 1) == 0 ? 4.0f : 1.0f);
-				h_matrix_a_f32.get()[i] = val;
+		for(std::size_t i = 0; i < n; i++){
+			for(std::size_t j = i; j < n; j++){
+				const auto val = dist(mt);
+				h_matrix_a_f32.get()[i + j * n] = val;
+				h_matrix_a_f32.get()[j + i * n] = val;
 			}
-		}while(!eigenqr::is_real(h_matrix_a_f32.get(), n));
+		}
 		error[0] += test::precision::eigen<float, float, false>(n, h_matrix_a_f32.get());
 		error[1] += test::precision::eigen<float, float, true>(n, h_matrix_a_f32.get());
 		error[2] += test::precision::eigen<half, half, false>(n, h_matrix_a_f32.get());

@@ -35,46 +35,38 @@ int main(int argc, char** argv){
 			h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 10.0f : 1.0f);
 		}
 	}while(!eigenqr::is_real(h_matrix_a.get(), N));
-	/*
-	   std::cout<<"//---------------- time test"<<std::endl;
-	   test::time::qr<float, float, true>(M, N, h_matrix_a.get());
-	   test::time::qr<float, float, false>(M, N, h_matrix_a.get());
-	   test::time::qr<half, half, true>(M, N, h_matrix_a.get());
-	   test::time::qr<half, half, false>(M, N, h_matrix_a.get());
-	   test::time::qr<half, float, true>(M, N, h_matrix_a.get());
-	   test::time::qr<half, float, false>(M, N, h_matrix_a.get());
+	std::cout<<"//---------------- qr time test"<<std::endl;
+	test::time::qr<float, float, true>(M, N, h_matrix_a.get());
+	test::time::qr<float, float, false>(M, N, h_matrix_a.get());
+	test::time::qr<half, half, true>(M, N, h_matrix_a.get());
+	test::time::qr<half, half, false>(M, N, h_matrix_a.get());
+	test::time::qr<half, float, true>(M, N, h_matrix_a.get());
+	test::time::qr<half, float, false>(M, N, h_matrix_a.get());
 
-	   std::cout<<"//---------------- precision test"<<std::endl;
-	   test::precision::qr<float, float, true>(M, N);
-	   test::precision::qr<float, float, false>(M, N);
-	   test::precision::qr<half, half, true>(M, N);
-	   test::precision::qr<half, half, false>(M, N);
-	   test::precision::qr<half, float, true>(M, N);
-	   test::precision::qr<half, float, false>(M, N);
-	   std::cout<<"//---------------- eigenvalue test"<<std::endl;
-	   test::time::eigen<float, float, false>(M, h_matrix_a.get());
-	   test::time::eigen<float, float, true>(M, h_matrix_a.get());
-	   test::time::eigen<half, half, false>(M, h_matrix_a.get());
-	   test::time::eigen<half, half, true>(M, h_matrix_a.get());
-	   test::time::eigen<half, float, false>(M, h_matrix_a.get());
-	   test::time::eigen<half, float, true>(M, h_matrix_a.get());*/
+	std::cout<<"//---------------- qr precision test"<<std::endl;
+	test::precision::qr<float, float, true>(M, N);
+	test::precision::qr<float, float, false>(M, N);
+	test::precision::qr<half, half, true>(M, N);
+	test::precision::qr<half, half, false>(M, N);
+	test::precision::qr<half, float, true>(M, N);
+	test::precision::qr<half, float, false>(M, N);
 
-	std::cout<<"//---------------- eigenvalue test"<<std::endl;
-	/*test::precision::eigen<float, float, false>(M);
-	test::precision::eigen<float, float, true>(M);
-	test::precision::eigen<half, half, false>(M);
-	test::precision::eigen<half, half, true>(M);
-	test::precision::eigen<half, float, false>(M);
-	test::precision::eigen<half, float, true>(M);*/
+	std::cout<<"//---------------- eigenvalue time test"<<std::endl;
+	test::time::eigen<float, float, false>(M, h_matrix_a.get());
+	test::time::eigen<float, float, true>(M, h_matrix_a.get());
+	test::time::eigen<half, half, false>(M, h_matrix_a.get());
+	test::time::eigen<half, half, true>(M, h_matrix_a.get());
+	test::time::eigen<half, float, false>(M, h_matrix_a.get());
+	test::time::eigen<half, float, true>(M, h_matrix_a.get());
 
+	std::cout<<"//---------------- eigenvalue precision test"<<std::endl;
 	test::precision::eigen_all(M);
 
-	/*
-	   std::cout<<"//---------------- time test (batched)"<<std::endl;
-	   test::time::qr_batched<float, float, true>(M, N, batch_size);
-	   test::time::qr_batched<float, float, false>(M, N, batch_size);
-	   test::time::qr_batched<half, half, true>(M, N, batch_size);
-	   test::time::qr_batched<half, half, false>(M, N, batch_size);
-	   test::time::qr_batched<half, float, true>(M, N, batch_size);
-	   test::time::qr_batched<half, float, false>(M, N, batch_size);*/
+	std::cout<<"//---------------- qr time test (batched)"<<std::endl;
+	test::time::qr_batched<float, float, true>(M, N, batch_size);
+	test::time::qr_batched<float, float, false>(M, N, batch_size);
+	test::time::qr_batched<half, half, true>(M, N, batch_size);
+	test::time::qr_batched<half, half, false>(M, N, batch_size);
+	test::time::qr_batched<half, float, true>(M, N, batch_size);
+	test::time::qr_batched<half, float, false>(M, N, batch_size);
 }
