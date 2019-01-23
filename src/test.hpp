@@ -16,7 +16,9 @@ namespace precision{
 template <class T, class Norm_t, bool UseTC, std::size_t test_count = 4096>
 void qr(const std::size_t m, const std::size_t n);
 template <class T, class Norm_t, bool UseTC, std::size_t test_count = 16>
-void eigen(const std::size_t n);
+float eigen(const std::size_t n, const float* const a = nullptr);
+template <std::size_t test_count = 8>
+void eigen_all(const std::size_t n);
 }
 }
 
