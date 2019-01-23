@@ -1,5 +1,11 @@
 # QR decomposition using TensorCore
 
+## Requirements
+
+- NVIDIA GPU (CC>=7.0)
+- CUDA >= 9.2
+- C++ >= 14
+
 ## How to execute
 
 1. Clone repository  
@@ -17,3 +23,5 @@ $ make
 ```
 $ ./tcqr.out
 ```
+
+
