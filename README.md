@@ -3,7 +3,7 @@
 ## How to execute
 
 1. Clone repository  
-This project uses [cutf](https://gitlab.momo86.net/mutsuki/cutf), so clone with `--recursive`
+Clone with `--recursive`, because this project uses [cutf](https://gitlab.momo86.net/mutsuki/cutf) as submodule
 ```
 $ git clone https://gitlab.momo86.net/mutsuki/tcqr --recursive
 ```
