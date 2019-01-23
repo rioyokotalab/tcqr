@@ -3,9 +3,11 @@
 #include <cutf/cublas.hpp>
 #include <cutf/type.hpp>
 #include <cutf/memory.hpp>
+#include <algorithm>
 #include "test.hpp"
 #include "utils.hpp"
 #include "tcqr.hpp"
+#include "eigenqr.hpp"
 
 // #define PRINT_MATRIX
 
@@ -184,6 +186,8 @@ void test::time::eigen(const std::size_t n, const float* const a){
 	auto d_eigenvalues = cutf::cuda::memory::get_device_unique_ptr<T>(n);
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(n * n);
 	auto h_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<T>(n);
+	auto h_correct_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<float>(n);
+	auto h_abs_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<float>(n);
 
 	// print type information{{{
 	utils::print_value(test_count, "Test count");
@@ -210,7 +214,21 @@ void test::time::eigen(const std::size_t n, const float* const a){
 	utils::print_value(elapsed_time / test_count, "Elapsed time", "ms");
 
 	cutf::cuda::memory::copy(h_eigenvalues.get(), d_eigenvalues.get(), n);
-	utils::print_matrix(h_eigenvalues.get(), 1, n, "Eigenvalue");
+
+	// 絶対値をソート
+	for(std::size_t i = 0; i < n; i++){
+		h_abs_eigenvalues.get()[i] = std::abs(cutf::cuda::type::cast<float>(h_eigenvalues.get()[i]));
+	}
+	std::sort(h_abs_eigenvalues.get(), h_abs_eigenvalues.get() + n, std::greater<float>());
+	utils::print_matrix(h_abs_eigenvalues.get(), 1, n, "Eigenvalue");
+
+	// 正答計算
+	eigenqr::eigen16x16(h_correct_eigenvalues.get(), a, n);
+	utils::print_matrix(h_correct_eigenvalues.get(), 1, n, "Correct Eigenvalue");
+
+	const auto error = utils::get_error(h_abs_eigenvalues.get(), h_correct_eigenvalues.get(), 1, n);
+	utils::print_value(error , "error");
+
 	std::cout<<std::endl;
 }
 
@@ -286,3 +304,109 @@ template void test::time::qr_batched<half, float, true>(const std::size_t, const
 template void test::time::qr_batched<half, float, false>(const std::size_t, const std::size_t ,const std::size_t);
 template void test::time::qr_batched<float, float, false>(const std::size_t, const std::size_t ,const std::size_t);
 template void test::time::qr_batched<float, float, true>(const std::size_t, const std::size_t ,const std::size_t);
+
+
+template <class T, class Norm_t, bool UseTC, std::size_t test_count>
+float test::precision::eigen(const std::size_t n, const float* const a){
+	if(UseTC)
+		tc_warning();
+	auto d_matrix_a = cutf::cuda::memory::get_device_unique_ptr<T>(n * n);
+	auto d_eigenvalues = cutf::cuda::memory::get_device_unique_ptr<T>(n);
+	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<T>(n * n);
+	auto h_matrix_a_f32 = cutf::cuda::memory::get_host_unique_ptr<float>(n * n);
+	auto h_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<T>(n);
+	auto h_correct_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<float>(n);
+	auto h_abs_eigenvalues = cutf::cuda::memory::get_host_unique_ptr<float>(n);
+
+	// print type information{{{
+	if(a == nullptr){
+		utils::print_value(test_count, "Test count");
+		utils::print_value(std::to_string(n) + " x " + std::to_string(n), "Matrix size");
+		utils::print_value(get_type_name<T>(), "Input type");
+		utils::print_value(get_type_name<Norm_t>(), "Norm type");
+		utils::print_value((UseTC ? "true" : "false"), "Use TC?");
+	}
+	std::mt19937 mt(0);
+	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+	float error_sum = 0.0f;
+	std::size_t t = (a == nullptr) ? test_count : 1;
+	for(std::size_t i = 0; i < t; i++){
+		//  対称行列の固有値は実数
+		if(a == nullptr){
+			for(std::size_t i = 0; i < n; i++){
+				for(std::size_t j = i; j < n; j++){
+					const auto val = dist(mt);
+					h_matrix_a_f32.get()[i + j * n] = val;
+					h_matrix_a.get()[i + j * n] = cutf::cuda::type::cast<T>(val);
+					h_matrix_a_f32.get()[j + i * n] = val;
+					h_matrix_a.get()[j + i * n] = cutf::cuda::type::cast<T>(val);
+				}
+			}
+		}else{
+			for(std::size_t i = 0; i < n * n; i++){
+				h_matrix_a_f32.get()[i] = a[i];
+				h_matrix_a.get()[i] = cutf::cuda::type::cast<T>(a[i]);
+			}
+		}
+		cutf::cuda::memory::copy(d_matrix_a.get(), h_matrix_a.get(), n * n);
+
+		tcqr::eigen16x16<T, Norm_t, UseTC>(d_eigenvalues.get(), d_matrix_a.get(), n);
+
+		cutf::cuda::memory::copy(h_eigenvalues.get(), d_eigenvalues.get(), n);
+
+		// 絶対値をソート
+		for(std::size_t i = 0; i < n; i++){
+			h_abs_eigenvalues.get()[i] = std::abs(cutf::cuda::type::cast<float>(h_eigenvalues.get()[i]));
+		}
+		std::sort(h_abs_eigenvalues.get(), h_abs_eigenvalues.get() + n, std::greater<float>());
+
+		// 正答計算
+		eigenqr::eigen16x16(h_correct_eigenvalues.get(), h_matrix_a_f32.get(), n);
+
+		error_sum += utils::get_error(h_abs_eigenvalues.get(), h_correct_eigenvalues.get(), 1, n);
+	}
+	if(a == nullptr){
+		utils::print_value(error_sum / t, "error avg");
+		std::cout<<std::endl;
+	}
+	return error_sum;
+}
+template float test::precision::eigen<half, half, true>(const std::size_t, const float* const);
+template float test::precision::eigen<half, half, false>(const std::size_t, const float* const);
+template float test::precision::eigen<half, float, true>(const std::size_t, const float* const);
+template float test::precision::eigen<half, float, false>(const std::size_t, const float* const);
+template float test::precision::eigen<float, float, false>(const std::size_t, const float* const);
+template float test::precision::eigen<float, float, true>(const std::size_t, const float* const);
+
+template <std::size_t test_count>
+void test::precision::eigen_all(const std::size_t n){
+	auto h_matrix_a_f32 = cutf::cuda::memory::get_host_unique_ptr<float>(n * n);
+	float error[6] = {0.0f};
+	std::mt19937 mt(std::random_device{}());
+	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+	const auto start_time = std::time(nullptr);
+	for(std::size_t c = 0; c < test_count; c++){
+		for(std::size_t i = 0; i < n; i++){
+			for(std::size_t j = i; j < n; j++){
+				const auto val = dist(mt);
+				h_matrix_a_f32.get()[i + j * n] = val;
+				h_matrix_a_f32.get()[j + i * n] = val;
+			}
+		}
+		error[0] += test::precision::eigen<float, float, false>(n, h_matrix_a_f32.get());
+		error[1] += test::precision::eigen<float, float, true>(n, h_matrix_a_f32.get());
+		error[2] += test::precision::eigen<half, half, false>(n, h_matrix_a_f32.get());
+		error[3] += test::precision::eigen<half, half, true>(n, h_matrix_a_f32.get());
+		error[4] += test::precision::eigen<half, float, false>(n, h_matrix_a_f32.get());
+		error[5] += test::precision::eigen<half, float, true>(n, h_matrix_a_f32.get());
+
+		utils::print_value((std::time(nullptr) - start_time), "#"+std::to_string(c));
+	}
+	utils::print_value(error[0]/test_count, "FF");
+	utils::print_value(error[1]/test_count, "FF-TC");
+	utils::print_value(error[2]/test_count, "HH");
+	utils::print_value(error[3]/test_count, "HH-TC");
+	utils::print_value(error[4]/test_count, "HF");
+	utils::print_value(error[5]/test_count, "HF-TC");
+}
+template void test::precision::eigen_all(const std::size_t);

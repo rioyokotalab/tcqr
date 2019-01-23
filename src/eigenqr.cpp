@@ -1,5 +1,7 @@
-#include <iostream>
+#include <algorithm>
+#include <vector>
 #include <Eigen/Dense>
+#include "eigenqr.hpp"
 
 namespace eigenqr{
 void eigen16x16(float* const eigenvalues, const float* const a, std::size_t n){
@@ -11,7 +13,16 @@ void eigen16x16(float* const eigenvalues, const float* const a, std::size_t n){
 		}
 	}
 	Eigen::EigenSolver<Eigen::MatrixXf> eigensolver(ma);
-	std::cout<<eigensolver.eigenvalues()<<std::endl;
+	std::vector<float> sorted_eigenvalues;
+	for(std::size_t i = 0; i < n; i++){
+		sorted_eigenvalues.push_back(std::abs(eigensolver.eigenvalues()[i].real()));
+	}
+
+	std::sort(sorted_eigenvalues.begin(), sorted_eigenvalues.end(), std::greater<float>());
+
+	for(std::size_t i = 0; i < n; i++){
+		eigenvalues[i] = sorted_eigenvalues[i];
+	}
 }
 
 }

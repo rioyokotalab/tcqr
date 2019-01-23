@@ -29,10 +29,10 @@ int main(int argc, char** argv){
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-rand_range, rand_range);
 	for(std::size_t i = 0; i < M * N; i++){
-		h_matrix_a.get()[i] = dist(mt) * (i % (M + 1) == 0 ? 20.0f : 1.0f);
+		h_matrix_a.get()[i] = dist(mt);
 	}
-	
-	std::cout<<"//---------------- time test"<<std::endl;
+
+	std::cout<<"//---------------- qr time test"<<std::endl;
 	test::time::qr<float, float, true>(M, N, h_matrix_a.get());
 	test::time::qr<float, float, false>(M, N, h_matrix_a.get());
 	test::time::qr<half, half, true>(M, N, h_matrix_a.get());
@@ -40,7 +40,7 @@ int main(int argc, char** argv){
 	test::time::qr<half, float, true>(M, N, h_matrix_a.get());
 	test::time::qr<half, float, false>(M, N, h_matrix_a.get());
 
-	std::cout<<"//---------------- precision test"<<std::endl;
+	std::cout<<"//---------------- qr precision test"<<std::endl;
 	test::precision::qr<float, float, true>(M, N);
 	test::precision::qr<float, float, false>(M, N);
 	test::precision::qr<half, half, true>(M, N);
@@ -48,7 +48,16 @@ int main(int argc, char** argv){
 	test::precision::qr<half, float, true>(M, N);
 	test::precision::qr<half, float, false>(M, N);
 
-	std::cout<<"//---------------- eigenvalue test"<<std::endl;
+	// 対称行列の固有値計算
+	for(std::size_t m = 0; m < M; m++){
+		for(std::size_t n = m; n < N; n++){
+			const auto val = dist(mt);
+			h_matrix_a.get()[m + M * n] = val;
+			h_matrix_a.get()[n + N * m] = val;
+		}
+	}
+
+	std::cout<<"//---------------- eigenvalue time test"<<std::endl;
 	test::time::eigen<float, float, false>(M, h_matrix_a.get());
 	test::time::eigen<float, float, true>(M, h_matrix_a.get());
 	test::time::eigen<half, half, false>(M, h_matrix_a.get());
@@ -56,9 +65,10 @@ int main(int argc, char** argv){
 	test::time::eigen<half, float, false>(M, h_matrix_a.get());
 	test::time::eigen<half, float, true>(M, h_matrix_a.get());
 
-	eigenqr::eigen16x16(nullptr, h_matrix_a.get(), M);
+	std::cout<<"//---------------- eigenvalue precision test"<<std::endl;
+	test::precision::eigen_all(M);
 
-	std::cout<<"//---------------- time test (batched)"<<std::endl;
+	std::cout<<"//---------------- qr time test (batched)"<<std::endl;
 	test::time::qr_batched<float, float, true>(M, N, batch_size);
 	test::time::qr_batched<float, float, false>(M, N, batch_size);
 	test::time::qr_batched<half, half, true>(M, N, batch_size);
