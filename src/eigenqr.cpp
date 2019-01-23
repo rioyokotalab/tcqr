@@ -1,5 +1,3 @@
-#include <iostream>
-#include <cmath>
 #include <algorithm>
 #include <vector>
 #include <Eigen/Dense>
@@ -15,7 +13,6 @@ void eigen16x16(float* const eigenvalues, const float* const a, std::size_t n){
 		}
 	}
 	Eigen::EigenSolver<Eigen::MatrixXf> eigensolver(ma);
-	//std::cout<<<<std::endl;
 	std::vector<float> sorted_eigenvalues;
 	for(std::size_t i = 0; i < n; i++){
 		sorted_eigenvalues.push_back(std::abs(eigensolver.eigenvalues()[i].real()));
