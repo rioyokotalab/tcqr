@@ -76,6 +76,17 @@ inline double get_error(const T* const matrix_a, const T* const matrix_b, const 
 	}
 	return std::sqrt(norm / norm_a);
 }
+
+template <class T>
+inline double get_error_eigen(const T* const matrix_a, const T* const matrix_b, const std::size_t m, const std::size_t n){
+	double norm_a = 0.0;
+	for(std::size_t i = 0; i < m * n; i++){
+		const auto tmp = cutf::cuda::type::cast<double>(matrix_a[i]) - cutf::cuda::type::cast<double>(matrix_b[i]);
+		const auto tmp_a = cutf::cuda::type::cast<double>(matrix_a[i]);
+		norm_a +=  (tmp * tmp) / (tmp_a * tmp_a);
+	}
+	return std::sqrt(norm_a);
+}
 } // namespace utils
 
 #endif /* end of include guard */

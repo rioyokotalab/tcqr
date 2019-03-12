@@ -363,7 +363,7 @@ float test::precision::eigen(const std::size_t n, const float* const a){
 		// 正答計算
 		eigenqr::eigen16x16(h_correct_eigenvalues.get(), h_matrix_a_f32.get(), n);
 
-		error_sum += utils::get_error(h_abs_eigenvalues.get(), h_correct_eigenvalues.get(), 1, n);
+		error_sum += utils::get_error_eigen(h_abs_eigenvalues.get(), h_correct_eigenvalues.get(), 1, n);
 	}
 	if(a == nullptr){
 		utils::print_value(error_sum / t, "error avg");
