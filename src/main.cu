@@ -32,12 +32,18 @@ int main(int argc, char** argv){
 	}
 	// }}}
 
+#ifdef QR_TIME_TEST QR_PRECISION_TEST EIGEN_TIME_TEST
+	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<float>(M * N);
+#endif 
+
+#ifdef QR_TIME_TEST QR_PRECISION_TEST
 	auto h_matrix_a = cutf::cuda::memory::get_host_unique_ptr<float>(M * N);
 	std::mt19937 mt(std::random_device{}());
 	std::uniform_real_distribution<float> dist(-rand_range, rand_range);
 	for(std::size_t i = 0; i < M * N; i++){
 		h_matrix_a.get()[i] = dist(mt);
 	}
+#endif
 
 #ifdef QR_TIME_TEST
 	std::cout<<"//---------------- qr time test"<<std::endl;
